@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "options": {
+    "typeAware": true,
+    "typeCheck": true
+  },
+  "plugins": ["typescript"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "ignorePatterns": ["**/dist/", "**/node_modules/"],
+  "rules": {
+    "no-underscore-dangle": [
+      "off",
+      {
+        "allowAfterThis": true,
+        "allowAfterSuper": true
+      }
+    ]
+  }
+}
