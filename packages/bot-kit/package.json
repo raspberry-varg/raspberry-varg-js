@@ -1,6 +1,6 @@
 {
   "name": "@raspberryvarg/bot-kit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": false,
   "description": "",
   "keywords": [],
@@ -12,16 +12,16 @@
     "dist"
   ],
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     "./package.json": "./package.json",
     ".": {
       "types": "./dist/index.d.ts",
-      "bun": "./src/index.ts",
       "default": "./dist/index.js"
     },
     "./discord": {
       "types": "./dist/discord/index.d.ts",
-      "bun": "./src/discord/index.ts",
       "default": "./dist/discord/index.js"
     }
   },

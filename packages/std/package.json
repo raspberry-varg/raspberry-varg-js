@@ -1,6 +1,6 @@
 {
   "name": "@raspberryvarg/std",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": false,
   "description": "",
   "keywords": [],
@@ -12,21 +12,20 @@
     "dist"
   ],
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     "./package.json": "./package.json",
     ".": {
       "types": "./dist/index.d.ts",
-      "bun": "./src/index.ts",
       "default": "./dist/index.js"
     },
     "./assertions": {
       "types": "./dist/assertions/index.d.ts",
-      "bun": "./src/assertions/index.ts",
       "default": "./dist/assertions/index.js"
     },
     "./math": {
       "types": "./dist/math/index.d.ts",
-      "bun": "./src/math/index.ts",
       "default": "./dist/math/index.js"
     }
   },
