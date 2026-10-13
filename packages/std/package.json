@@ -1,5 +1,5 @@
 {
-  "name": "@raspberry-varg/std",
+  "name": "@raspberryvarg/std",
   "version": "1.0.0",
   "private": false,
   "description": "",
@@ -39,7 +39,7 @@
     "prepack": "rm -rf ./dist/** && pnpm run build"
   },
   "devDependencies": {
-    "@raspberry-varg/config": "workspace:*",
+    "@raspberryvarg/config": "workspace:*",
     "@types/bun": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",

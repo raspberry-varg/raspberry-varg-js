@@ -1,5 +1,5 @@
 {
-  "name": "@raspberry-varg/bot-kit",
+  "name": "@raspberryvarg/bot-kit",
   "version": "1.0.0",
   "private": false,
   "description": "",
@@ -34,7 +34,7 @@
     "prepack": "rm -rf ./dist/** && pnpm run build"
   },
   "devDependencies": {
-    "@raspberry-varg/config": "workspace:*",
+    "@raspberryvarg/config": "workspace:*",
     "@types/bun": "catalog:",
     "discord.js": "catalog:",
     "oxfmt": "catalog:",

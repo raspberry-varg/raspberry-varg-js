@@ -187,7 +187,7 @@ importers:
 
   .:
     devDependencies:
-      '@raspberry-varg/config':
+      '@raspberryvarg/config':
         specifier: 'workspace:'
         version: link:packages/config
       '@types/bun':
@@ -208,7 +208,7 @@ importers:
 
   packages/bot-kit:
     devDependencies:
-      '@raspberry-varg/config':
+      '@raspberryvarg/config':
         specifier: workspace:*
         version: link:../config
       '@types/bun':
@@ -247,7 +247,7 @@ importers:
 
   packages/std:
     devDependencies:
-      '@raspberry-varg/config':
+      '@raspberryvarg/config':
         specifier: workspace:*
         version: link:../config
       '@types/bun':
