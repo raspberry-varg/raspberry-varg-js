@@ -245,6 +245,27 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
+  packages/std:
+    devDependencies:
+      '@raspberry-varg/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/bun':
+        specifier: 'catalog:'
+        version: 1.4.2
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.72.0
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.87.0(oxlint-tsgolint@7.0.2004)
+      oxlint-tsgolint:
+        specifier: 'catalog:'
+        version: 7.0.2004
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
 packages:
 
   '@discordjs/builders@1.14.1':

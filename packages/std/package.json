@@ -1,0 +1,57 @@
+{
+  "name": "@raspberry-varg/std",
+  "version": "1.0.0",
+  "private": false,
+  "description": "",
+  "keywords": [],
+  "license": "ISC",
+  "directories": {
+    "lib": "dist"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "bun": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./assertions": {
+      "types": "./dist/assertions/index.d.ts",
+      "bun": "./src/assertions/index.ts",
+      "default": "./dist/assertions/index.js"
+    },
+    "./math": {
+      "types": "./dist/math/index.d.ts",
+      "bun": "./src/math/index.ts",
+      "default": "./dist/math/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "bun test",
+    "build": "tsc -p ./tsconfig.build.json",
+    "prepack": "rm -rf ./dist/** && pnpm run build"
+  },
+  "devDependencies": {
+    "@raspberry-varg/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.11.2",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.11.2"
+}

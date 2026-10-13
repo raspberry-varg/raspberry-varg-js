@@ -1,10 +1,10 @@
 {
   "name": "@raspberry-varg/bot-kit",
   "version": "1.0.0",
+  "private": false,
   "description": "",
   "keywords": [],
   "license": "ISC",
-  "author": "",
   "directories": {
     "lib": "dist"
   },
