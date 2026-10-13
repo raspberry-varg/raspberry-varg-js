@@ -5,6 +5,9 @@
   "files": [
     "*.json"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
