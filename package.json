@@ -10,6 +10,7 @@
     "clean": "pnpm --recursive exec rm -rf dist node_modules"
   },
   "devDependencies": {
+    "@raspberry-varg/config": "workspace:",
     "@types/bun": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",

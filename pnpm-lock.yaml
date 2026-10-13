@@ -187,6 +187,9 @@ importers:
 
   .:
     devDependencies:
+      '@raspberry-varg/config':
+        specifier: 'workspace:'
+        version: link:packages/config
       '@types/bun':
         specifier: 'catalog:'
         version: 1.4.2
@@ -227,7 +230,20 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
-  packages/config: {}
+  packages/config:
+    devDependencies:
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.72.0
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.87.0(oxlint-tsgolint@7.0.2004)
+      oxlint-tsgolint:
+        specifier: 'catalog:'
+        version: 7.0.2004
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
 packages:
 

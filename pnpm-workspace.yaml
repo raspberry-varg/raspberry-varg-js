@@ -1,8 +1,8 @@
 packages:
-  - "packages/*"
+  - 'packages/*'
 
 catalog:
-  "@types/bun": ^1.4.2
+  '@types/bun': ^1.4.2
   discord.js: ^14.27.0
   oxfmt: ^0.72.0
   oxlint: ^1.87.0

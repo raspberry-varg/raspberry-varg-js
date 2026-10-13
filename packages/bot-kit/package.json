@@ -18,6 +18,11 @@
       "types": "./dist/index.d.ts",
       "bun": "./src/index.ts",
       "default": "./dist/index.js"
+    },
+    "./discord": {
+      "types": "./dist/discord/index.d.ts",
+      "bun": "./src/discord/index.ts",
+      "default": "./dist/discord/index.js"
     }
   },
   "publishConfig": {

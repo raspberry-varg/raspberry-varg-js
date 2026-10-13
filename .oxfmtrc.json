@@ -1,3 +1,28 @@
 {
-  "extends": ["./packages/config/oxfmt.json"]
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "tabWidth": 2,
+  "useTabs": false,
+  "singleQuote": true,
+  "bracketSpacing": true,
+  "printWidth": 100,
+  "semi": true,
+  "trailingComma": "all",
+  "sortImports": {
+    "newlinesBetween": true,
+    "customGroups": [
+      {
+        "groupName": "internal-alias",
+        "elementNamePattern": ["@**", "~**"]
+      }
+    ],
+    "groups": [
+      "value-builtin",
+      "value-external",
+      "internal-alias",
+      "value-parent",
+      ["value-sibling", "value-index"],
+      "type-import",
+      "unknown"
+    ]
+  }
 }

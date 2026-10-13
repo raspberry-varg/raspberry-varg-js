@@ -1,6 +1,6 @@
-import { coreLog } from "../internal/coreLog.js";
+import { coreLog } from '../internal/coreLog.js';
 
-const isDev = process.env.NODE_ENV === "development";
+const isDev = process.env.NODE_ENV === 'development';
 
 interface Injectable {
   token: symbol | string;
@@ -13,12 +13,8 @@ class Container {
   private registry = new Map<Token<unknown>, Factory<unknown>>();
   private instances = new Map<Token<unknown>, unknown>();
 
-  constructor() {
-    console.log("Constructed container");
-  }
-
   register<T>(token: Token<T>, factory: Factory<T>) {
-    if (typeof token === "function") {
+    if (typeof token === 'function') {
       token = token.token;
     }
 
@@ -45,7 +41,7 @@ class Container {
   }
 
   resolve<T>(token: Token<T>): T {
-    if (typeof token === "function") {
+    if (typeof token === 'function') {
       token = token.token;
     }
 

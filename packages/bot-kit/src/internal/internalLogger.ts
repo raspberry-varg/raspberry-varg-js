@@ -1,4 +1,4 @@
-import { LogLevel, type LogLevelString, type BotKitLoggerMeta, getConfig } from "../config.js";
+import { LogLevel, type LogLevelString, type BotKitLoggerMeta, getConfig } from '../core/config.js';
 
 export function shouldLog(level: (typeof LogLevel)[LogLevelString]): boolean {
   return LogLevel[getConfig().logLevel] >= level;
@@ -10,7 +10,7 @@ export function shouldLog(level: (typeof LogLevel)[LogLevelString]): boolean {
 export class InternalLogger {
   constructor(
     private readonly scope: string,
-    private readonly ns: string = "",
+    private readonly ns: string = '',
   ) {}
 
   namespaced(ns: string): InternalLogger {
@@ -33,7 +33,7 @@ export class InternalLogger {
 
   debug(msg: string, maybeLazyMeta?: BotKitLoggerMeta | (() => BotKitLoggerMeta)) {
     if (shouldLog(LogLevel.debug)) {
-      const meta = typeof maybeLazyMeta === "function" ? maybeLazyMeta() : maybeLazyMeta;
+      const meta = typeof maybeLazyMeta === 'function' ? maybeLazyMeta() : maybeLazyMeta;
       getConfig().logger.debug?.(this.fmtMsg(msg), meta);
     }
   }
