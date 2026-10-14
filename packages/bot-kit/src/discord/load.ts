@@ -4,6 +4,7 @@ import * as bun from 'bun';
 import { type Client } from 'discord.js';
 
 import { coreLog } from '../internal/coreLog.js';
+import { resolveSerializableOr } from '../util/serializableOr.js';
 
 import { isContextMenuCommandHandler, isSlashCommandHandler } from './command.js';
 import { type EventContext, isEventHandler } from './event.js';
@@ -23,9 +24,13 @@ export async function loadAllInteractions(config: BotKitConfig, client: Client) 
       loadFolder(p, (module) => {
         for (const exported of Object.values(module)) {
           if (isSlashCommandHandler(exported)) {
-            registry.slashCommands.set(exported.data.name, exported);
+            const data = resolveSerializableOr(exported.data);
+            exported.data = data;
+            registry.slashCommands.set(data.name, exported);
           } else if (isContextMenuCommandHandler(exported)) {
-            registry.contextMenuCommands.set(exported.data.name, exported);
+            const data = resolveSerializableOr(exported.data);
+            exported.data = data;
+            registry.contextMenuCommands.set(data.name, exported);
           } else if (isEventHandler(exported)) {
             const { event, once, execute } = exported;
             const name = String(event);

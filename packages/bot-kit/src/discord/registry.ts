@@ -5,8 +5,10 @@ import {
 } from 'discord.js';
 
 import { coreLog } from '../internal/coreLog.js';
+import { resolveSerializableOr } from '../util/serializableOr.js';
 
-import type { ContextMenuCommandHandler, SlashCommandHandler } from './command.js';
+import { type ContextMenuCommandHandler, type SlashCommandHandler } from './command.js';
+
 import type { EventHandler } from './event.js';
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -47,5 +49,5 @@ export function gatherCommandsToJson(): ReadonlyArray<AnyApplicationCommandsJSON
   return [
     ...slashCommands.map((handler) => handler.data),
     ...contextMenuCommands.map((handler) => handler.data),
-  ].map((builder) => builder.toJSON());
+  ].map((serializableOr) => resolveSerializableOr(serializableOr));
 }

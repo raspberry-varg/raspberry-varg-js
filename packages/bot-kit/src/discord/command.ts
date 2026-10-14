@@ -1,19 +1,33 @@
-import type {
-  SlashCommandBuilder,
-  ContextMenuCommandBuilder,
-  ChatInputCommandInteraction,
-  ContextMenuCommandInteraction,
-  AutocompleteInteraction,
+import {
+  type AutocompleteInteraction,
+  type Awaitable,
+  type ChatInputCommandInteraction,
+  type ContextMenuCommandInteraction,
+  type RESTPostAPIChatInputApplicationCommandsJSONBody,
+  type RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from 'discord.js';
 
+import type { SerializableOr } from '../util/serializableOr.js';
+
 /**
- * Instantiated slash command handler definition.
+ * Valid data for slash commands.
+ */
+export type SlashCommandData = SerializableOr<RESTPostAPIChatInputApplicationCommandsJSONBody>;
+
+/**
+ * Valid data for context menu commands.
+ */
+export type ContextMenuCommandData =
+  SerializableOr<RESTPostAPIContextMenuApplicationCommandsJSONBody>;
+
+/**
+ * Slash command handler definition.
  */
 export interface SlashCommandHandler {
   __router_isSlashCommandHandler: true;
-  data: SlashCommandBuilder;
-  execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
-  autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
+  data: SlashCommandData;
+  execute: (interaction: ChatInputCommandInteraction) => Awaitable<void>;
+  autocomplete?: (interaction: AutocompleteInteraction) => Awaitable<void>;
 }
 
 /**
@@ -28,17 +42,20 @@ export function defineSlashCommand(
   };
 }
 
+/**
+ * Returns true if the value is a slash command handler created with {@link defineSlashCommand}.
+ */
 export function isSlashCommandHandler(value: unknown): value is SlashCommandHandler {
   return value != null && typeof value === 'object' && '__router_isSlashCommandHandler' in value;
 }
 
 /**
- * Instantiated context menu command handler definition.
+ * Context menu command handler definition.
  */
 export interface ContextMenuCommandHandler {
   __router_isContextMenuCommandHandler: true;
-  data: ContextMenuCommandBuilder;
-  execute: (interaction: ContextMenuCommandInteraction) => Promise<void>;
+  data: ContextMenuCommandData;
+  execute: (interaction: ContextMenuCommandInteraction) => Awaitable<void>;
 }
 
 /**
@@ -53,6 +70,10 @@ export function defineContextMenuCommand(
   };
 }
 
+/**
+ * Returns true if the value is a context menu command handler created with
+ * {@link defineContextMenuCommand}.
+ */
 export function isContextMenuCommandHandler(value: unknown): value is ContextMenuCommandHandler {
   return (
     value != null && typeof value === 'object' && '__router_isContextMenuCommandHandler' in value
