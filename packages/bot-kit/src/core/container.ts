@@ -1,19 +1,16 @@
 import { coreLog } from '../internal/coreLog.js';
 
+import type { Token } from './token.js';
+
 const isDev = process.env.NODE_ENV === 'development';
 
-interface Injectable {
-  token: symbol | string;
-}
-
-type Token<T> = ((abstract new (...args: unknown[]) => T) & Injectable) | string | symbol;
-type Factory<T> = (container: Container) => T;
+type ImplFactory<T> = (container: Container) => T;
 
 class Container {
-  private registry = new Map<Token<unknown>, Factory<unknown>>();
+  private registry = new Map<Token<unknown>, ImplFactory<unknown>>();
   private instances = new Map<Token<unknown>, unknown>();
 
-  register<T>(token: Token<T>, factory: Factory<T>) {
+  register<T>(token: Token<T>, factory: ImplFactory<T>) {
     if (typeof token === 'function') {
       token = token.token;
     }
