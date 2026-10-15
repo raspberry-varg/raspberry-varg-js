@@ -62,6 +62,11 @@ class Container {
 
 export const container = new Container();
 
+/**
+ * Inject a registered dependency.
+ *
+ * @throws {Error} If the dependency is not registered.
+ */
 export function inject<T>(token: Token<T>): T {
   return container.resolve(token);
 }
