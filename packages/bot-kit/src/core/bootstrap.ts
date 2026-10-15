@@ -86,7 +86,7 @@ async function deployCommandsIfNecessary(config: BotKitConfig): Promise<void> {
 type SyncCommandsOptions =
   | {
       syncGlobally?: false;
-      guildIds: string[];
+      guildIds: readonly string[];
     }
   | {
       syncGlobally: true;

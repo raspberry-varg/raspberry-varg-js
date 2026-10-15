@@ -20,7 +20,7 @@ export interface BotKitConfig {
   clientToken: string;
   clientApplicationId: string;
 
-  paths?: string[];
+  paths?: readonly string[];
 
   commandSync: {
     shouldSync: (newHash: string) => boolean | Promise<boolean>;
@@ -31,7 +31,7 @@ export interface BotKitConfig {
       }
     | {
         target: 'development';
-        testGuildIds: string | string[];
+        testGuildIds: string | readonly string[];
       }
   );
 }
