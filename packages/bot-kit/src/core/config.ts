@@ -40,7 +40,7 @@ export interface BotKitConfig {
       }
   );
 
-  interactionMiddlewares: readonly InteractionMiddleware[];
+  interactionMiddleware: readonly InteractionMiddleware[];
 }
 
 export type BotKitLoggerMeta = Record<string, any>;
@@ -124,7 +124,7 @@ const globalConfig = {
   logLevel: getEnvLogLevel() ?? (process.env.NODE_ENV === 'production' ? 'warn' : 'info'),
   logger: defaultLogger,
   supportHotReloading: false,
-  interactionMiddlewares: [] as readonly InteractionMiddleware[],
+  interactionMiddleware: [] as readonly InteractionMiddleware[],
 } satisfies Partial<BotKitConfig>;
 
 export function configure(options: BotKitConfigPartial): BotKitConfig {

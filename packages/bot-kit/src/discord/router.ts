@@ -24,7 +24,7 @@ export function initializeRouter(client: Client): void {
 }
 
 async function handle(interaction: Interaction): Promise<void> {
-  const middlewares = getConfig().interactionMiddlewares;
+  const middlewares = getConfig().interactionMiddleware;
   try {
     if (middlewares.length === 0) {
       await doHandle(interaction);
