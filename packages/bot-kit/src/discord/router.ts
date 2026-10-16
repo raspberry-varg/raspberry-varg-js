@@ -1,3 +1,4 @@
+import { getConfig, type InteractionMiddleware } from '../core/config.js';
 import { coreLog } from '../internal/coreLog.js';
 
 import * as registry from './registry.js';
@@ -23,9 +24,13 @@ export function initializeRouter(client: Client): void {
 }
 
 async function handle(interaction: Interaction): Promise<void> {
+  const middlewares = getConfig().interactionMiddlewares;
   try {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-    await doHandle(interaction);
+    if (middlewares.length === 0) {
+      await doHandle(interaction);
+    } else {
+      await executeMiddlewares(middlewares, interaction, doHandle);
+    }
   } catch (error: unknown) {
     coreLog.error('Error while handling interaction', error, {
       id: interaction.id,
@@ -71,4 +76,27 @@ async function doHandle(interaction: Interaction): Promise<void> {
     }
     await handler.execute(interaction);
   }
+}
+
+async function executeMiddlewares(
+  pipeline: readonly InteractionMiddleware[],
+  interaction: Interaction,
+  finalStep: (interaction: Interaction) => void | Promise<void>,
+): Promise<void> {
+  let index = -1;
+
+  const dispatch = async (i: number): Promise<void> => {
+    if (i <= index) throw new Error('next() called multiple times in middleware');
+    index = i;
+
+    if (i === pipeline.length) {
+      await finalStep(interaction);
+      return;
+    }
+
+    const middleware = pipeline[i];
+    await middleware(interaction, () => dispatch(i + 1));
+  };
+
+  await dispatch(0);
 }

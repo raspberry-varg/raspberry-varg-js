@@ -1,4 +1,9 @@
-import type { ClientOptions } from 'discord.js';
+import type { ClientOptions, Interaction } from 'discord.js';
+
+export type InteractionMiddleware = (
+  interaction: Interaction,
+  next: () => Promise<void>,
+) => void | Promise<void>;
 
 export interface BotKitConfig {
   /**
@@ -34,6 +39,8 @@ export interface BotKitConfig {
         testGuildIds: string | readonly string[];
       }
   );
+
+  interactionMiddlewares: readonly InteractionMiddleware[];
 }
 
 export type BotKitLoggerMeta = Record<string, any>;
@@ -117,6 +124,7 @@ const globalConfig = {
   logLevel: getEnvLogLevel() ?? (process.env.NODE_ENV === 'production' ? 'warn' : 'info'),
   logger: defaultLogger,
   supportHotReloading: false,
+  interactionMiddlewares: [] as readonly InteractionMiddleware[],
 } satisfies Partial<BotKitConfig>;
 
 export function configure(options: BotKitConfigPartial): BotKitConfig {
