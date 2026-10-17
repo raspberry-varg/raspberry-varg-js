@@ -4,7 +4,6 @@ import {
   type RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from 'discord.js';
 
-import { coreLog } from '../internal/coreLog.js';
 import { resolveSerializableOr } from '../util/serializableOr.js';
 
 import { type ContextMenuCommandHandler, type SlashCommandHandler } from './command.js';
@@ -23,7 +22,6 @@ const hmr = globalThis as typeof globalThis & {
 };
 
 if (isDev && !hmr.hotReloadCommandRegistry) {
-  coreLog.info('🔥 HMR: Initializing file registry.');
   hmr.hotReloadCommandRegistry = {
     slashCommands: new Collection(),
     contextMenuCommands: new Collection(),
