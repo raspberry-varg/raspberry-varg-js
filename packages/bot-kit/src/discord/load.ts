@@ -85,12 +85,7 @@ async function loadFolder(dirPath: string, config: BotKitConfig, cb: FileLoadCal
 }
 
 async function loadOne(filePath: string, config: BotKitConfig, cb: FileLoadCallback) {
-  try {
-    const importPath = config.supportHotReloading ? `${filePath}?update=${Date.now()}` : filePath;
-    const module = await import(importPath);
-    cb(module);
-    logger.verbose(`Loaded ${importPath}`);
-  } catch (error: unknown) {
-    logger.error(`Failed to load command: ${filePath}`, error);
-  }
+  const importPath = config.supportHotReloading ? `${filePath}?update=${Date.now()}` : filePath;
+  const module = await import(importPath);
+  cb(module);
 }
