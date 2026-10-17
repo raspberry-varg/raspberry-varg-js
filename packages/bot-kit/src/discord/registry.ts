@@ -11,6 +11,7 @@ import { type ContextMenuCommandHandler, type SlashCommandHandler } from './comm
 
 import type { EventHandler } from './event.js';
 
+// TODO: Make registry creation lazy so we can use getConfig().supportHotReloading
 const isDev = process.env.NODE_ENV === 'development';
 
 const hmr = globalThis as typeof globalThis & {

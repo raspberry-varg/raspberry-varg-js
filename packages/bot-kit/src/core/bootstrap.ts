@@ -54,7 +54,7 @@ export async function bootstrap(configPartial: BootstrapConfigPartial): Promise<
   }
   coreLog.info('Client successfully logged in.');
 
-  initializeRouter(client);
+  initializeRouter(config, client);
   coreLog.verbose('Command router initialized.');
 
   return result;

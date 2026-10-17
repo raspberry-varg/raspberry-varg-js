@@ -1,8 +1,8 @@
+import { getConfig } from '../core/index.js';
+
 import { diLogger } from './logger.js';
 
 import type { Token } from './token.js';
-
-const isDev = process.env.NODE_ENV === 'development';
 
 type ImplFactory<T> = (container: Container) => T;
 
@@ -18,8 +18,7 @@ export class Container {
       token = token.token;
     }
 
-    if (isDev) {
-      // HMR
+    if (getConfig().supportHotReloading) {
       if (this.registry.delete(token)) {
         diLogger.verbose(`HMR: Overriding inject for ${String(token)}`);
       }

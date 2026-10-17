@@ -1,4 +1,4 @@
-import { getConfig, type InteractionMiddleware } from '../core/config.js';
+import { type BotKitConfig, getConfig, type InteractionMiddleware } from '../core/config.js';
 
 import { discordLogger } from './logger.js';
 import * as registry from './registry.js';
@@ -6,21 +6,20 @@ import * as registry from './registry.js';
 import type { Client, Interaction } from 'discord.js';
 
 const logger = discordLogger.namespaced('router');
-const isDev = process.env.NODE_ENV === 'development';
 const hmr = globalThis as typeof globalThis & {
-  onInteractionCreateHandler: (interaction: Interaction) => void;
+  hmr__onInteractionCreateHandler: (interaction: Interaction) => void;
 };
 
-export function initializeRouter(client: Client): void {
-  const handler = (isDev && hmr.onInteractionCreateHandler) || handle;
-  if (isDev && hmr.onInteractionCreateHandler) {
-    client.off('interactionCreate', hmr.onInteractionCreateHandler);
+export function initializeRouter(config: BotKitConfig, client: Client): void {
+  const handler = (config.supportHotReloading && hmr.hmr__onInteractionCreateHandler) || handle;
+  if (config.supportHotReloading && hmr.hmr__onInteractionCreateHandler) {
+    client.off('interactionCreate', hmr.hmr__onInteractionCreateHandler);
   }
 
   client.on('interactionCreate', handler);
 
-  if (isDev) {
-    hmr.onInteractionCreateHandler = handler;
+  if (config.supportHotReloading) {
+    hmr.hmr__onInteractionCreateHandler = handler;
   }
 }
 
