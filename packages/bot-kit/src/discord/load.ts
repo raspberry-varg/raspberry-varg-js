@@ -3,15 +3,16 @@ import * as path from 'node:path';
 import * as bun from 'bun';
 import { type Client } from 'discord.js';
 
-import { coreLog } from '../internal/coreLog.js';
 import { resolveSerializableOr } from '../util/serializableOr.js';
 
 import { isContextMenuCommandHandler, isSlashCommandHandler } from './command.js';
 import { type EventContext, isEventHandler } from './event.js';
+import { discordLogger } from './logger.js';
 import * as registry from './registry.js';
 
 import type { BotKitConfig } from '../core/index.js';
 
+const logger = discordLogger.namespaced('loader');
 const isDev = process.env.NODE_ENV === 'development';
 
 export async function loadAllInteractions(config: BotKitConfig, client: Client) {
@@ -72,18 +73,18 @@ async function loadFolder(dirPath: string, cb: FileLoadCallback) {
       loadOne(fullPath, cb)
         .then(() => {
           successCount++;
-          coreLog.verbose(`Loaded ${fullPath}`);
+          logger.verbose(`Loaded ${fullPath}`);
         })
         .catch((e: unknown) => {
-          coreLog.error(`Failed to load ${fullPath}`, e);
+          logger.error(`Failed to load ${fullPath}`, e);
         }),
     );
   }
-  coreLog.verbose(
+  logger.verbose(
     `Kicked off ${importOps.length} import load operations in parallel for ${dirPath}`,
   );
   await Promise.all(importOps);
-  coreLog.info(`Loaded ${successCount} files from ${dirPath}`);
+  logger.info(`Loaded ${successCount} files from ${dirPath}`);
 }
 
 async function loadOne(filePath: string, cb: FileLoadCallback) {
@@ -91,8 +92,8 @@ async function loadOne(filePath: string, cb: FileLoadCallback) {
     const importPath = isDev ? `${filePath}?update=${Date.now()}` : filePath;
     const module = await import(importPath);
     cb(module);
-    coreLog.verbose(`Loaded ${importPath}`);
+    logger.verbose(`Loaded ${importPath}`);
   } catch (error: unknown) {
-    coreLog.error(`Failed to hot-load command: ${filePath}`, error);
+    logger.error(`Failed to hot-load command: ${filePath}`, error);
   }
 }

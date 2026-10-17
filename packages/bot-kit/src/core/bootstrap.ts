@@ -2,29 +2,34 @@ import crypto from 'crypto';
 
 import { Client, REST, Routes } from 'discord.js';
 
+import { bootstrapApp, type BootstrapAppResult } from '../app/bootstrapApp.js';
 import { loadAllInteractions } from '../discord/load.js';
 import { type AnyApplicationCommandsJSONBody, gatherCommandsToJson } from '../discord/registry.js';
 import { initializeRouter } from '../discord/router.js';
 import { coreLog } from '../internal/coreLog.js';
 
-import { type BotKitConfig, type BotKitConfigPartial, configure } from './config.js';
-
-const isDev = process.env.NODE_ENV === 'development';
+import { type BotKitConfig, type BootstrapConfigPartial, configure } from './config.js';
 
 const hmr = globalThis as typeof globalThis & {
-  discordClient?: Client;
-  discordClientLoggedIn?: boolean;
+  hmr__discordClient?: Client;
+  hmr__discordClientLoggedIn?: boolean;
 };
 
-export async function bootstrap(configPartial: BotKitConfigPartial): Promise<void> {
+export interface BootstrapResult extends BootstrapAppResult {
+  client: Client;
+}
+
+export async function bootstrap(configPartial: BootstrapConfigPartial): Promise<BootstrapResult> {
   const config = configure(configPartial);
+  const bootstrapAppResult = await bootstrapApp(config);
+
   let client: Client;
-  if (!isDev) {
+  if (!config.supportHotReloading) {
     client = new Client(config.clientOptions);
   } else {
-    if (hmr.discordClient) {
+    if (hmr.hmr__discordClient) {
       coreLog.info('🔥 HMR: Reusing existing client.');
-      client = hmr.discordClient;
+      client = hmr.hmr__discordClient;
     } else {
       client = new Client(config.clientOptions);
     }
@@ -33,17 +38,26 @@ export async function bootstrap(configPartial: BotKitConfigPartial): Promise<voi
   await loadAllInteractions(config, client);
   await deployCommandsIfNecessary(config);
 
-  if (isDev && hmr.discordClientLoggedIn) {
+  const result: BootstrapResult = {
+    ...bootstrapAppResult,
+    client,
+  };
+
+  if (config.supportHotReloading && hmr.hmr__discordClientLoggedIn) {
     coreLog.info('🔥 HMR: Skipping Discord client login.');
-    return;
+    return result;
   }
 
   await client.login(config.clientToken);
-  if (isDev) {
-    hmr.discordClientLoggedIn = true;
+  if (config.supportHotReloading) {
+    hmr.hmr__discordClientLoggedIn = true;
   }
-  initializeRouter(client);
   coreLog.info('Client successfully logged in.');
+
+  initializeRouter(client);
+  coreLog.verbose('Command router initialized.');
+
+  return result;
 }
 
 async function deployCommandsIfNecessary(config: BotKitConfig): Promise<void> {

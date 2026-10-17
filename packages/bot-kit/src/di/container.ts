@@ -1,4 +1,4 @@
-import { coreLog } from '../internal/coreLog.js';
+import { diLogger } from './logger.js';
 
 import type { Token } from './token.js';
 
@@ -6,7 +6,10 @@ const isDev = process.env.NODE_ENV === 'development';
 
 type ImplFactory<T> = (container: Container) => T;
 
-class Container {
+/**
+ * Dependency injection container. One is provided globally.
+ */
+export class Container {
   private registry = new Map<Token<unknown>, ImplFactory<unknown>>();
   private instances = new Map<Token<unknown>, unknown>();
 
@@ -18,10 +21,10 @@ class Container {
     if (isDev) {
       // HMR
       if (this.registry.delete(token)) {
-        coreLog.verbose(`HMR: Overriding inject for ${String(token)}`);
+        diLogger.verbose(`HMR: Overriding inject for ${String(token)}`);
       }
       if (this.instances.delete(token)) {
-        coreLog.verbose(`HMR: Invalidating constructed instance for ${String(token)}`);
+        diLogger.verbose(`HMR: Invalidating constructed instance for ${String(token)}`);
       }
     }
 
@@ -52,7 +55,7 @@ class Container {
       throw new Error(`Missing dependency: ${String(token)}`);
     }
 
-    coreLog.verbose(`Resolving ${String(token)} dependency: ${String(factory)}`);
+    diLogger.verbose(`Resolving ${tokenToString(token)} dependency: ${String(factory)}`);
     const instance = factory(this);
     this.instances.set(token, instance);
     // oxlint-disable-next-line no-unsafe-type-assertion
@@ -69,4 +72,15 @@ export const container = new Container();
  */
 export function inject<T>(token: Token<T>): T {
   return container.resolve(token);
+}
+
+function tokenToString(token: Token<unknown>): string {
+  if (typeof token === 'object') {
+    token = token.token;
+  }
+  if (typeof token === 'function') {
+    token = token.token || token.constructor.name;
+  }
+
+  return String(token);
 }

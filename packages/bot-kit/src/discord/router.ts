@@ -1,10 +1,11 @@
 import { getConfig, type InteractionMiddleware } from '../core/config.js';
-import { coreLog } from '../internal/coreLog.js';
 
+import { discordLogger } from './logger.js';
 import * as registry from './registry.js';
 
 import type { Client, Interaction } from 'discord.js';
 
+const logger = discordLogger.namespaced('router');
 const isDev = process.env.NODE_ENV === 'development';
 const hmr = globalThis as typeof globalThis & {
   onInteractionCreateHandler: (interaction: Interaction) => void;
@@ -32,7 +33,7 @@ async function handle(interaction: Interaction): Promise<void> {
       await executeMiddlewares(middlewares, interaction, doHandle);
     }
   } catch (error: unknown) {
-    coreLog.error('Error while handling interaction', error, {
+    logger.error('Error while handling interaction', error, {
       id: interaction.id,
       type: interaction.type,
       userId: interaction.user.id,
@@ -42,10 +43,10 @@ async function handle(interaction: Interaction): Promise<void> {
 
 async function doHandle(interaction: Interaction): Promise<void> {
   if (interaction.isChatInputCommand()) {
-    coreLog.verbose(`Received chat input command: ${interaction.commandName}`);
+    logger.verbose(`Received chat input command: ${interaction.commandName}`);
     const handler = registry.slashCommands.get(interaction.commandName);
     if (!handler) {
-      coreLog.warn(`No handler found for command: ${interaction.commandName}`);
+      logger.warn(`No handler found for command: ${interaction.commandName}`);
       return;
     }
     if (handler.autocomplete && interaction.isAutocomplete()) {
@@ -55,23 +56,23 @@ async function doHandle(interaction: Interaction): Promise<void> {
     }
   }
   if (interaction.isAutocomplete()) {
-    coreLog.verbose(`Received autocomplete request: ${interaction.commandName}`);
+    logger.verbose(`Received autocomplete request: ${interaction.commandName}`);
     const handler = registry.slashCommands.get(interaction.commandName);
     if (!handler) {
-      coreLog.warn(`No handler found for command: ${interaction.commandName}`);
+      logger.warn(`No handler found for command: ${interaction.commandName}`);
       return;
     }
     if (!handler.autocomplete) {
-      coreLog.warn(`No autocomplete handler found for command: ${interaction.commandName}`);
+      logger.warn(`No autocomplete handler found for command: ${interaction.commandName}`);
       return;
     }
     await handler.autocomplete(interaction);
   }
   if (interaction.isContextMenuCommand()) {
-    coreLog.verbose(`Received context menu command: ${interaction.commandName}`);
+    logger.verbose(`Received context menu command: ${interaction.commandName}`);
     const handler = registry.contextMenuCommands.get(interaction.commandName);
     if (!handler) {
-      coreLog.warn(`No handler found for command: ${interaction.commandName}`);
+      logger.warn(`No handler found for command: ${interaction.commandName}`);
       return;
     }
     await handler.execute(interaction);
