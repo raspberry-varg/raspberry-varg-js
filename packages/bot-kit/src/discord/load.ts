@@ -13,7 +13,6 @@ import * as registry from './registry.js';
 import type { BotKitConfig } from '../core/index.js';
 
 const logger = discordLogger.namespaced('loader');
-const isDev = process.env.NODE_ENV === 'development';
 
 export async function loadAllInteractions(config: BotKitConfig, client: Client) {
   if (!config.paths?.length) {
@@ -22,7 +21,7 @@ export async function loadAllInteractions(config: BotKitConfig, client: Client) 
 
   await Promise.allSettled(
     config.paths.map((p) =>
-      loadFolder(p, (module) => {
+      loadFolder(p, config, (module) => {
         for (const exported of Object.values(module)) {
           if (isSlashCommandHandler(exported)) {
             const data = resolveSerializableOr(exported.data);
@@ -61,7 +60,7 @@ export async function loadAllInteractions(config: BotKitConfig, client: Client) 
 
 type FileLoadCallback = (file: Record<string, unknown>) => void;
 
-async function loadFolder(dirPath: string, cb: FileLoadCallback) {
+async function loadFolder(dirPath: string, config: BotKitConfig, cb: FileLoadCallback) {
   const glob = new bun.Glob(`**/*.{ts,js,tsx,jsx}`);
   const filePaths = glob.scan(dirPath);
   const importOps: Array<Promise<void>> = [];
@@ -70,7 +69,7 @@ async function loadFolder(dirPath: string, cb: FileLoadCallback) {
   for await (const file of filePaths) {
     const fullPath = path.join(dirPath, file);
     importOps.push(
-      loadOne(fullPath, cb)
+      loadOne(fullPath, config, cb)
         .then(() => {
           successCount++;
           logger.verbose(`Loaded ${fullPath}`);
@@ -87,13 +86,13 @@ async function loadFolder(dirPath: string, cb: FileLoadCallback) {
   logger.info(`Loaded ${successCount} files from ${dirPath}`);
 }
 
-async function loadOne(filePath: string, cb: FileLoadCallback) {
+async function loadOne(filePath: string, config: BotKitConfig, cb: FileLoadCallback) {
   try {
-    const importPath = isDev ? `${filePath}?update=${Date.now()}` : filePath;
+    const importPath = config.supportHotReloading ? `${filePath}?update=${Date.now()}` : filePath;
     const module = await import(importPath);
     cb(module);
     logger.verbose(`Loaded ${importPath}`);
   } catch (error: unknown) {
-    logger.error(`Failed to hot-load command: ${filePath}`, error);
+    logger.error(`Failed to load command: ${filePath}`, error);
   }
 }
