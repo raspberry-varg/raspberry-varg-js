@@ -97,7 +97,11 @@ export class Container {
   }
 }
 
-export const container = new Container();
+let globalContainer: Container | undefined;
+
+export function setGlobalContainer(container: Container): void {
+  globalContainer = container;
+}
 
 /**
  * Inject a registered dependency.
@@ -105,7 +109,10 @@ export const container = new Container();
  * @throws {Error} If the dependency is not registered.
  */
 export function inject<T>(token: Token<T>): T {
-  return container.resolve(token);
+  if (!globalContainer) {
+    throw new Error('Global container is not set');
+  }
+  return globalContainer.resolve(token);
 }
 
 function tokenToString(token: Token<unknown>): string {
