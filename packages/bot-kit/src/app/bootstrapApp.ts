@@ -70,7 +70,7 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
 
   if (previousModules.size) {
     const toKill = popPrevModulesToKill(previousModules, newModules);
-    if (toKill.length) await executeAll(toKill, 'shutdown');
+    if (toKill.length) await executeAll(toKill.toReversed(), 'shutdown');
   }
 
   if (!(await executeAll(sortedModules, 'register'))) {
