@@ -102,6 +102,7 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
   let shutdownWithExit: typeof shutdown | undefined;
   if (config.handleProcessSignals) {
     shutdownWithExit = async () => {
+      previousModules.clear();
       await shutdown();
       process.exit(0);
     };
