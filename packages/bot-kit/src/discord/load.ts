@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 
 import * as bun from 'bun';
-import { type Client } from 'discord.js';
+import { type Client, type ClientEvents } from 'discord.js';
 
 import { resolveSerializableOr } from '../util/serializableOr.js';
 
@@ -33,22 +33,20 @@ export async function loadAllInteractions(config: BotKitConfig, client: Client) 
             registry.contextMenuCommands.set(data.name, exported);
           } else if (isEventHandler(exported)) {
             const { event, once, execute } = exported;
-            const name = String(event);
-            const prev = registry.events.get(name);
+            const prev = registry.events.get(event);
             if (prev) {
-              client.off(name, prev.execute);
-              registry.events.delete(name);
+              client.off(event as string, prev.execute);
+              registry.events.delete(event);
             }
 
             const ctx: EventContext = {
               client,
             };
-            const handler = (...args: unknown[]) =>
-              (execute as (...args: unknown[]) => unknown)(...args, ctx);
+            const handler = (...args: ClientEvents[keyof ClientEvents]) => execute(...args, ctx);
             if (once) {
-              client.once(name, handler);
+              client.once(event, handler);
             } else {
-              client.on(name, handler);
+              client.on(event, handler);
             }
             registry.events.set(event, exported);
           }

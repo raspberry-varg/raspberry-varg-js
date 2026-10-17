@@ -5,8 +5,8 @@ import type { ClientOptions, Interaction } from 'discord.js';
 /**
  * Configuration with keys with defaults marked as optional.
  */
-export type BootstrapConfigPartial = Omit<BotKitConfig, keyof typeof globalConfig> &
-  Partial<Pick<BotKitConfig, keyof typeof globalConfig>>;
+export type BootstrapConfigPartial = Omit<BotKitConfig, keyof typeof globalConfigDefaults> &
+  Partial<Pick<BotKitConfig, keyof typeof globalConfigDefaults>>;
 
 /**
  * Middleware that runs before an interaction is routed. The final action is routing a command to
@@ -46,16 +46,25 @@ export interface BotKitConfig extends AppConfig {
   interactionMiddleware: readonly InteractionMiddleware[];
 }
 
-const globalConfig = {
+const globalConfigDefaults = {
   ...appConfigDefaults,
   paths: [] as BotKitConfig['paths'],
   interactionMiddleware: [] as BotKitConfig['interactionMiddleware'],
 } satisfies Partial<BotKitConfig>;
 
+let globalConfig: BotKitConfig | undefined;
+
 export function configure(options: BootstrapConfigPartial): BotKitConfig {
-  return Object.assign(globalConfig, options) as BotKitConfig;
+  if (globalConfig != null) {
+    throw new Error('BotKit has already been configured.');
+  }
+  globalConfig = { ...globalConfigDefaults, ...options };
+  return globalConfig;
 }
 
 export function getConfig(): Readonly<BotKitConfig> {
-  return globalConfig as BotKitConfig;
+  if (globalConfig == null) {
+    throw new Error('BotKit has not been configured.');
+  }
+  return globalConfig;
 }

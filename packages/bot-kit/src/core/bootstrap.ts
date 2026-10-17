@@ -94,7 +94,7 @@ async function deployCommandsIfNecessary(config: BotKitConfig): Promise<void> {
         },
   );
 
-  commandSync.onSynced?.(currentHash);
+  await commandSync.onSynced?.(currentHash);
 }
 
 type SyncCommandsOptions =

@@ -42,6 +42,7 @@ export function getEnvLogLevel(): LogLevelString | undefined {
 
   const normalized = rawEnv.toLowerCase().trim();
   if (normalized in LogLevel) {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion Checked for key.
     return normalized as LogLevelString;
   }
 

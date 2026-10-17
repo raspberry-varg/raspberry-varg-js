@@ -7,7 +7,7 @@ import type { Client, Interaction } from 'discord.js';
 
 const logger = discordLogger.namespaced('router');
 const hmr = globalThis as typeof globalThis & {
-  hmr__onInteractionCreateHandler: (interaction: Interaction) => void;
+  hmr__onInteractionCreateHandler?: (interaction: Interaction) => void;
 };
 
 export function initializeRouter(config: BotKitConfig, client: Client): void {

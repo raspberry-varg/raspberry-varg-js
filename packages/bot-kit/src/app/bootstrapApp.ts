@@ -30,7 +30,7 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
 
   if (config.supportHotReloading && hmr.hmr__previousShutdown) {
     const { shutdown, shutdownWithExit } = hmr.hmr__previousShutdown;
-    shutdown();
+    await shutdown();
     if (shutdownWithExit) {
       process.off('SIGINT', shutdownWithExit);
       process.off('SIGTERM', shutdownWithExit);
