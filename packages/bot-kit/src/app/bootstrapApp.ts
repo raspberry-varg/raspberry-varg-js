@@ -5,6 +5,7 @@ import { topologicalSort } from '../util/topologicalSort.js';
 import type { FeatureModule, LifecycleMethod } from '../modules/index.js';
 import type { AppConfig } from './config.js';
 
+const moduleLoaderLogger = coreLog.namespaced('modules').namespaced('loader');
 const hmr = globalThis as typeof globalThis & {
   hmr__globalContainer?: Container;
   hmr__previousModules?: Map<string, FeatureModule>;
@@ -51,16 +52,24 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
   ): Promise<boolean> => {
     let errored = false;
 
-    for (const module of modules) {
-      if (module[method] == null || previousModules.has(module.name)) {
+    for (let i = 0; i < modules.length; i++) {
+      const module = modules[i];
+      const logPrefix = `(Module ➔ ${method} ${i + 1}/${modules.length}) ${module.name} \t-`;
+      if (module[method] == null) {
+        moduleLoaderLogger.verbose(`${logPrefix} Skipping: Not provided`);
+        continue;
+      }
+      if (previousModules.has(module.name)) {
+        moduleLoaderLogger.verbose(`${logPrefix} Skipping: Keep-alive`);
         continue;
       }
 
       try {
+        moduleLoaderLogger.verbose(`${logPrefix} Executing...`);
         await module[method](container);
-        coreLog.verbose(`Executed ${method}: ${module.name}`);
+        moduleLoaderLogger.verbose(`${logPrefix} Done.`);
       } catch (error) {
-        coreLog.error(`Error executing ${method}: ${module.constructor.name}`, error);
+        moduleLoaderLogger.error(`${logPrefix} Error during execution`, error);
         errored = true;
       }
     }
@@ -87,7 +96,7 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
 
   const shutdown: BootstrapAppResult['shutdown'] = async () => {
     await executeAll(sortedModules.toReversed(), 'shutdown');
-    coreLog.info('Module shutdown complete.');
+    moduleLoaderLogger.info('Module shutdown complete.');
   };
 
   let shutdownWithExit: typeof shutdown | undefined;
