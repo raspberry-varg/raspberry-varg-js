@@ -15,7 +15,7 @@ import type { BotKitConfig } from '../core/index.js';
 const logger = discordLogger.namespaced('loader');
 
 export async function loadAllInteractions(config: BotKitConfig, client: Client) {
-  if (!config.paths?.length) {
+  if (!config.paths.length) {
     return;
   }
 

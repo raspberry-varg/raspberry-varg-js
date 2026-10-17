@@ -22,17 +22,18 @@ export interface AppConfig {
   /**
    * All modules to load and manage lifecycles.
    */
-  modules?: readonly FeatureModule[];
+  modules: readonly FeatureModule[];
 
   /**
    * Shut down modules when SIGINT or SIGTERM is received.
    */
-  handleProcessSignals?: boolean;
+  handleProcessSignals: boolean;
 }
 
 export const appConfigDefaults = {
   logLevel: getEnvLogLevel() ?? (process.env.NODE_ENV === 'production' ? 'warn' : 'debug'),
   logger: defaultAppLogger,
   supportHotReloading: process.env.NODE_ENV === 'development',
+  modules: [] as AppConfig['modules'],
   handleProcessSignals: true,
 } as const satisfies Partial<AppConfig>;

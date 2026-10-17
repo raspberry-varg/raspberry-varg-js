@@ -26,7 +26,7 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
     }
   }
 
-  const { modules = [] } = config;
+  const { modules } = config;
   // TODO: Topological sort based on some dependency list.
   let success = true;
   for (const module of modules) {

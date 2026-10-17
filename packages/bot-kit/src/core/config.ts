@@ -28,7 +28,7 @@ export interface BotKitConfig extends AppConfig {
   clientToken: string;
   clientApplicationId: string;
 
-  paths?: readonly string[];
+  paths: readonly string[];
 
   commandSync: {
     shouldSync: (newHash: string) => boolean | Promise<boolean>;
@@ -48,7 +48,8 @@ export interface BotKitConfig extends AppConfig {
 
 const globalConfig = {
   ...appConfigDefaults,
-  interactionMiddleware: [] as readonly InteractionMiddleware[],
+  paths: [] as BotKitConfig['paths'],
+  interactionMiddleware: [] as BotKitConfig['interactionMiddleware'],
 } satisfies Partial<BotKitConfig>;
 
 export function configure(options: BootstrapConfigPartial): BotKitConfig {
