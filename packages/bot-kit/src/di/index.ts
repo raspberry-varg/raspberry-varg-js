@@ -1,2 +1,2 @@
 export * from './token.js';
-export { inject } from './container.js';
+export { inject, injectAll, type Container } from './container.js';
