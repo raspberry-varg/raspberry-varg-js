@@ -1,5 +1,6 @@
 import { Container, setGlobalContainer } from '../di/container.js';
 import { coreLog } from '../internal/coreLog.js';
+import { resolveModuleGraph } from '../modules/resolveModuleGraph.js';
 import { topologicalSort } from '../util/topologicalSort.js';
 
 import type { FeatureModule, LifecycleMethod } from '../modules/index.js';
@@ -42,8 +43,10 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
   const previousModules: Map<string, FeatureModule> =
     config.supportHotReloading && hmr.hmr__previousModules ? hmr.hmr__previousModules : new Map();
 
-  const filteredModules = config.modules.filter((m) => m.enabled == null || m.enabled());
-  const sortedModules = sortModules(filteredModules);
+  const enabledModules = resolveModuleGraph(config.modules).filter(
+    (m) => m.enabled == null || m.enabled(),
+  );
+  const sortedModules = sortModules(enabledModules);
   const newModules = new Map(sortedModules.map((module) => [module.name, module]));
 
   const executeAll = async (
