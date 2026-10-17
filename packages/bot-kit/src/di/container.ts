@@ -12,6 +12,10 @@ interface Entry {
   lifetime: Lifetime;
 }
 
+type ResolveTokenTuple<T extends readonly Token<unknown>[]> = {
+  [K in keyof T]: T[K] extends Token<infer U> ? U : any;
+};
+
 /**
  * Dependency injection container. One is provided globally.
  */
@@ -72,6 +76,17 @@ export class Container {
     return this.register(token, factory, 'transient');
   }
 
+  /**
+   * Resolve multiple tokens to their registered instances.
+   */
+  resolveAll<T extends ReadonlyArray<Token<any>>>(...tokens: [...T]): ResolveTokenTuple<T> {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    return tokens.map((t) => this.resolve(t)) as ResolveTokenTuple<T>;
+  }
+
+  /**
+   * Resolve a token to its registered instance.
+   */
   resolve<T>(token: Token<T>): T {
     if (typeof token === 'function') {
       token = token.token;
@@ -92,7 +107,7 @@ export class Container {
     if (entry.lifetime === 'singleton') {
       this.singletons.set(token, instance);
     }
-    // oxlint-disable-next-line no-unsafe-type-assertion
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     return instance as T;
   }
 }
@@ -113,6 +128,20 @@ export function inject<T>(token: Token<T>): T {
     throw new Error('Global container is not set');
   }
   return globalContainer.resolve(token);
+}
+
+/**
+ * Inject multiple registered dependencies at once.
+ *
+ * @throws {Error} If any dependency is not registered.
+ */
+export function injectAll<T extends ReadonlyArray<Token<any>>>(
+  ...tokens: [...T]
+): ResolveTokenTuple<T> {
+  if (!globalContainer) {
+    throw new Error('Global container is not set');
+  }
+  return globalContainer.resolveAll(...tokens);
 }
 
 function tokenToString(token: Token<unknown>): string {
