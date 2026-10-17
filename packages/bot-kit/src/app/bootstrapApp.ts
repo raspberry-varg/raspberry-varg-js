@@ -1,11 +1,13 @@
 import { Container, setGlobalContainer } from '../di/container.js';
 import { coreLog } from '../internal/coreLog.js';
+import { topologicalSort } from '../util/topologicalSort.js';
 
-import type { FeatureModule } from '../modules/index.js';
+import type { FeatureModule, LifecycleMethod } from '../modules/index.js';
 import type { AppConfig } from './config.js';
 
 const hmr = globalThis as typeof globalThis & {
   hmr__globalContainer?: Container;
+  hmr__previousModules?: Map<string, FeatureModule>;
   hmr__previousShutdown?: {
     shutdown: BootstrapAppResult['shutdown'];
     shutdownWithExit?: ShutdownFn;
@@ -26,10 +28,7 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
     hmr.hmr__globalContainer = container;
   }
 
-  let isHotReload = false;
   if (config.supportHotReloading && hmr.hmr__previousShutdown) {
-    isHotReload = true;
-
     const { shutdown, shutdownWithExit } = hmr.hmr__previousShutdown;
     shutdown();
     if (shutdownWithExit) {
@@ -39,44 +38,55 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
     hmr.hmr__previousShutdown = undefined;
   }
 
-  const modules = config.modules.filter((m) => m.enabled == null || m.enabled());
-  // TODO: Topological sort based on some dependency list.
-  let success = true;
-  for (const module of runnableModules(modules, 'register', isHotReload)) {
-    try {
-      await module.register(container);
-      coreLog.verbose(`Registered module: ${module.name}`);
-    } catch (error) {
-      coreLog.error(`Error registering module: ${module.constructor.name}`, error);
-      success = false;
+  const previousModules: Map<string, FeatureModule> =
+    config.supportHotReloading && hmr.hmr__previousModules ? hmr.hmr__previousModules : new Map();
+
+  const filteredModules = config.modules.filter((m) => m.enabled == null || m.enabled());
+  const sortedModules = sortModules(filteredModules);
+  const newModules = new Map(sortedModules.map((module) => [module.name, module]));
+
+  const executeAll = async (
+    modules: readonly FeatureModule[],
+    method: LifecycleMethod,
+  ): Promise<boolean> => {
+    let errored = false;
+
+    for (const module of modules) {
+      if (module[method] == null || previousModules.has(module.name)) {
+        continue;
+      }
+
+      try {
+        await module[method](container);
+        coreLog.verbose(`Executed ${method}: ${module.name}`);
+      } catch (error) {
+        coreLog.error(`Error executing ${method}: ${module.constructor.name}`, error);
+        errored = true;
+      }
     }
+
+    return !errored;
+  };
+
+  if (previousModules.size) {
+    const toKill = popPrevModulesToKill(previousModules, newModules);
+    if (toKill.length) await executeAll(toKill, 'shutdown');
   }
-  if (!success) {
+
+  if (!(await executeAll(sortedModules, 'register'))) {
     throw new Error('Failed to register one or more modules.');
   }
 
-  for (const module of runnableModules(modules, 'boot', isHotReload)) {
-    try {
-      await module.boot(container);
-      coreLog.verbose(`Booted module: ${module.name}`);
-    } catch (error) {
-      coreLog.error(`Error booting module: ${module.constructor.name}`, error);
-      success = false;
-    }
-  }
-  if (!success) {
+  if (!(await executeAll(sortedModules, 'boot'))) {
     throw new Error('Failed to boot one or more modules.');
   }
 
+  for (const module of sortedModules) {
+    previousModules.set(module.name, module);
+  }
+
   const shutdown: BootstrapAppResult['shutdown'] = async () => {
-    for (const module of runnableModules(modules.toReversed(), 'shutdown', isHotReload)) {
-      try {
-        await module.shutdown(container);
-        coreLog.verbose(`Shutdown module: ${module.name}`);
-      } catch (error) {
-        coreLog.error(`Error shutting down module: ${module.name}`, error);
-      }
-    }
+    await executeAll(sortedModules.toReversed(), 'shutdown');
     coreLog.info('Module shutdown complete.');
   };
 
@@ -103,17 +113,46 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
   };
 }
 
-function* runnableModules<K extends keyof Pick<FeatureModule, 'register' | 'boot' | 'shutdown'>>(
-  modules: readonly FeatureModule[],
-  property: K,
-  isHotReload: boolean,
-): Generator<FeatureModule & Required<Pick<FeatureModule, K>>> {
-  for (const module of modules) {
-    if (isHotReload && module.hmr?.surviveSoftReload) {
-      continue;
-    }
-    if (module[property]) {
-      yield module as FeatureModule & Required<Pick<FeatureModule, K>>;
+function sortModules(modules: readonly FeatureModule[]): FeatureModule[] {
+  return topologicalSort(
+    modules,
+    (module) => module.name,
+    (module) => {
+      const dependsOn: Partial<FeatureModule['dependsOn']> = module.dependsOn;
+      if (!dependsOn?.length) {
+        return [];
+      }
+
+      const resolved: string[] = [];
+      for (let i = 0; i < dependsOn.length; i++) {
+        const dependency = dependsOn[i];
+        if (dependency == null) {
+          throw new Error(
+            `Dependency for module '${module.name}' at index ${i} is undefined. Is there a ` +
+              `circular dependency?`,
+          );
+        }
+        resolved.push(dependency.name);
+      }
+
+      return resolved;
+    },
+  );
+}
+
+function popPrevModulesToKill(
+  previousModules: Map<string, FeatureModule>,
+  nextModules: ReadonlyMap<string, FeatureModule>,
+): FeatureModule[] {
+  const modulesToKill: FeatureModule[] = [];
+  for (const [name, prev] of previousModules) {
+    const next = nextModules.get(name);
+    const survive = next && prev.hmr?.surviveSoftReload && next.hmr?.surviveSoftReload;
+
+    if (!survive) {
+      previousModules.delete(name);
+      modulesToKill.push(prev);
     }
   }
+  return modulesToKill;
 }

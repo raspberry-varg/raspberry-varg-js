@@ -1,5 +1,7 @@
 import type { Container } from '../di/container.js';
 
+export type LifecycleMethod = keyof Pick<FeatureModule, 'register' | 'boot' | 'shutdown'>;
+
 export interface FeatureModule {
   /**
    * The name of the module.
@@ -7,6 +9,11 @@ export interface FeatureModule {
    * Mainly for debugging, no real use case right now.
    */
   name: string;
+
+  /**
+   * Modules that must be resolved before this module's lifecycle runs.
+   */
+  dependsOn?: readonly FeatureModule[];
 
   /**
    * If defined, the module will only be registered and booted if the function returns true.
