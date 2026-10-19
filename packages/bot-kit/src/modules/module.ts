@@ -2,7 +2,14 @@ import type { Container } from '../di/container.js';
 
 export type LifecycleMethod = keyof Pick<FeatureModule, 'register' | 'boot' | 'shutdown'>;
 
+export interface FeatureModuleAutoDiscovery {
+  root: string;
+  pattern: string;
+}
+
 export interface FeatureModule {
+  readonly __isFeatureModule: true;
+
   /**
    * The name of the module.
    *
@@ -48,6 +55,15 @@ export interface FeatureModule {
 /**
  * Define a module with a managed lifecycle.
  */
-export function defineModule(module: FeatureModule): Readonly<FeatureModule> {
-  return module;
+export function defineModule(
+  module: Omit<FeatureModule, '__isFeatureModule'>,
+): Readonly<FeatureModule> {
+  return {
+    ...module,
+    __isFeatureModule: true,
+  };
+}
+
+export function isModule(module: unknown): module is FeatureModule {
+  return typeof module === 'object' && module !== null && '__isFeatureModule' in module;
 }

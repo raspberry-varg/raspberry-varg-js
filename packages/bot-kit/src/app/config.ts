@@ -1,6 +1,6 @@
 import { defaultAppLogger, getEnvLogLevel } from './defaultAppLogger.js';
 
-import type { FeatureModule } from '../modules/module.js';
+import type { FeatureModule, FeatureModuleAutoDiscovery } from '../modules/module.js';
 import type { AppLogger, LogLevelString } from './appLogger.js';
 
 export interface AppConfig {
@@ -22,7 +22,7 @@ export interface AppConfig {
   /**
    * All modules to load and manage lifecycles.
    */
-  modules: readonly FeatureModule[];
+  modules: FeatureModuleAutoDiscovery | ReadonlyArray<FeatureModule | FeatureModuleAutoDiscovery>;
 
   /**
    * Shut down modules when SIGINT or SIGTERM is received.
