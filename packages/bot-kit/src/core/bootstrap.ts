@@ -96,7 +96,7 @@ async function deployCommands(
   const Rest = new REST({ version: '10' }).setToken(config.client.token);
 
   if (options.target === 'global') {
-    coreLog?.info('Syncing all global application commands...');
+    coreLog.info('Syncing all global application commands...');
     await Rest.put(Routes.applicationCommands(config.client.applicationId), {
       body: commands,
     });
@@ -106,7 +106,7 @@ async function deployCommands(
       ? options.guildIds
       : [options.guildIds];
     for (const id of ids) {
-      coreLog?.info(`Syncing guild application commands for guildId: ${id}`);
+      coreLog.info(`Syncing guild application commands for guildId: ${id}`);
       putQueue.push(
         Rest.put(Routes.applicationGuildCommands(config.client.applicationId, id), {
           body: commands,
@@ -115,5 +115,5 @@ async function deployCommands(
     }
     await Promise.all(putQueue);
   }
-  coreLog?.info('Application command sync complete');
+  coreLog.info('Application command sync complete');
 }
