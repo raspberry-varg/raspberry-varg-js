@@ -50,16 +50,21 @@ export interface FeatureModule {
   };
 }
 
+const ModulePrototype = {
+  __isFeatureModule: true,
+  toString() {
+    return `[Module ${this.name}]`;
+  },
+} satisfies Partial<FeatureModule> & { toString: () => string };
+
 /**
  * Define a module with a managed lifecycle.
  */
 export function defineModule(
   module: Omit<FeatureModule, '__isFeatureModule'>,
 ): Readonly<FeatureModule> {
-  return {
-    ...module,
-    __isFeatureModule: true,
-  };
+  const instance = Object.create(ModulePrototype);
+  return Object.assign(instance, module);
 }
 
 export function isModule(module: unknown): module is FeatureModule {

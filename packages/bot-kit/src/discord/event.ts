@@ -4,11 +4,7 @@ export interface EventContext {
   client: Client;
 }
 
-/**
- * Instantiated slash command handler definition.
- */
-export interface EventHandler<K extends keyof ClientEvents = keyof ClientEvents> {
-  __router_isEventHandler: true;
+export interface EventHandlerDefinition<K extends keyof ClientEvents> {
   /**
    * Disconnect the listener as soon as the first event is fired.
    */
@@ -18,15 +14,31 @@ export interface EventHandler<K extends keyof ClientEvents = keyof ClientEvents>
 }
 
 /**
+ * Instantiated slash command handler definition.
+ */
+export interface EventHandler<
+  K extends keyof ClientEvents = keyof ClientEvents,
+> extends EventHandlerDefinition<K> {
+  __router_isEventHandler: true;
+  toString(): string;
+}
+
+const eventHandlerPrototype = {
+  __router_isEventHandler: true,
+  toString(): string {
+    return `[EventHandler '${this.event}']`;
+  },
+} satisfies Partial<EventHandler>;
+
+/**
  * Creates a slash command handler definition.
  */
 export function defineEvent<K extends keyof ClientEvents>(
-  definition: Omit<EventHandler<K>, '__router_isEventHandler'>,
+  definition: EventHandlerDefinition<K>,
 ): EventHandler<K> {
-  return {
-    ...definition,
-    __router_isEventHandler: true,
-  };
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  const instance = Object.create(eventHandlerPrototype) as typeof eventHandlerPrototype;
+  return Object.assign(instance, definition);
 }
 
 export function isEventHandler(value: unknown): value is EventHandler {

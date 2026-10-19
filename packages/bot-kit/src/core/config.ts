@@ -1,5 +1,8 @@
 import { type AppConfig, appConfigDefaults } from '../app/config.js';
 
+import type { AnyCommandHandler, EventHandler } from '../discord/index.js';
+import type { AutoDiscoverable } from '../util/autoDiscover.js';
+import type { MaybeReadonlyArray } from '../util/maybeReadonlyArray.js';
 import type { ClientOptions, Interaction } from 'discord.js';
 
 /**
@@ -39,11 +42,18 @@ export interface BotKitConfig extends AppConfig {
     applicationId: string;
   };
 
-  commandSync: {
+  handlers: {
     /**
-     * Paths to search for command and event handlers.
+     * Command handlers or paths to search.
      */
-    paths?: readonly string[];
+    commands?: MaybeReadonlyArray<AutoDiscoverable<AnyCommandHandler>>;
+    /**
+     * Event handlers or paths to search.
+     */
+    clientEvents?: MaybeReadonlyArray<AutoDiscoverable<EventHandler>>;
+  };
+
+  commandSync: {
     shouldSync: (newHash: string) => boolean | Promise<boolean>;
     onSynced?: (newHash: string) => void | Promise<void>;
     deploy: CommandDeployment;
@@ -54,6 +64,7 @@ export interface BotKitConfig extends AppConfig {
 
 const globalConfigDefaults = {
   ...appConfigDefaults,
+  handlers: {},
   interactionMiddleware: [] as BotKitConfig['interactionMiddleware'],
 } satisfies Partial<BotKitConfig>;
 

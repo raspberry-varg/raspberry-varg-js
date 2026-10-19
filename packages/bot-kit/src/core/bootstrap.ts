@@ -70,7 +70,7 @@ async function deployCommandsIfNecessary(config: BotKitConfig): Promise<void> {
 
   let commands = gatherCommandsToJson();
   if (!commands.length) {
-    coreLog.info('No commands found. Skipping deployment.');
+    coreLog.info('No commands provided. Skipping deployment.');
     return;
   }
   commands = commands.toSorted((a, b) => a.name.localeCompare(b.name));

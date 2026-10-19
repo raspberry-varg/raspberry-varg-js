@@ -1,14 +1,8 @@
-import * as path from 'node:path';
-
 import { Container, setGlobalContainer } from '../di/container.js';
 import { coreLog } from '../internal/coreLog.js';
-import {
-  type FeatureModule,
-  type FeatureModuleAutoDiscovery,
-  isModule,
-  type LifecycleMethod,
-} from '../modules/index.js';
+import { type FeatureModule, isModule, type LifecycleMethod } from '../modules/index.js';
 import { resolveModuleGraph } from '../modules/resolveModuleGraph.js';
+import { discoverAll } from '../util/autoDiscover.js';
 import { topologicalSort } from '../util/topologicalSort.js';
 
 import type { AppConfig } from './config.js';
@@ -50,7 +44,7 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
   const previousModules: Map<string, FeatureModule> =
     config.supportHotReloading && hmr.hmr__previousModules ? hmr.hmr__previousModules : new Map();
 
-  const resolvedModules = await resolveModules(config.modules);
+  const resolvedModules = await discoverAll(config.modules, isModule);
   const enabledModules = resolveModuleGraph(resolvedModules).filter(
     (m) => m.enabled == null || m.enabled(),
   );
@@ -176,36 +170,4 @@ function popPrevModulesToKill(
     }
   }
   return modulesToKill;
-}
-
-async function resolveModules(toResolve: AppConfig['modules']): Promise<FeatureModule[]> {
-  const resolved: FeatureModule[] = [];
-  const asArray = Array.isArray(toResolve) ? toResolve : [toResolve];
-  for (const moduleResolvable of asArray) {
-    if (isModule(moduleResolvable)) {
-      resolved.push(moduleResolvable);
-    } else {
-      resolved.push(...(await discoverModules(moduleResolvable)));
-    }
-  }
-  return resolved;
-}
-
-async function discoverModules(
-  moduleResolvable: FeatureModuleAutoDiscovery,
-): Promise<FeatureModule[]> {
-  const { root, pattern } = moduleResolvable;
-  const scan = new Bun.Glob(pattern);
-  const discovered: FeatureModule[] = [];
-  for await (const file of scan.scan(root)) {
-    const fullPath = path.join(root, file);
-    const module = await import(fullPath);
-    for (const exported of Object.values(module)) {
-      if (isModule(exported)) {
-        moduleLoaderLogger.verbose(`Auto-discovered module: ${exported.name}`);
-        discovered.push(exported);
-      }
-    }
-  }
-  return discovered;
 }

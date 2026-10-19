@@ -7,7 +7,20 @@ import {
   type RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from 'discord.js';
 
-import type { SerializableOr } from '../util/serializableOr.js';
+import {
+  type ResolvedSerializableOr,
+  resolveSerializableOr,
+  type SerializableOr,
+} from '../util/serializableOr.js';
+
+/**
+ * Any valid command handler.
+ */
+export type AnyCommandHandler = SlashCommandHandler | ContextMenuCommandHandler;
+
+export function isAnyCommandHandler(value: unknown): value is AnyCommandHandler {
+  return isSlashCommandHandler(value) || isContextMenuCommandHandler(value);
+}
 
 /**
  * Valid data for slash commands.
@@ -20,26 +33,39 @@ export type SlashCommandData = SerializableOr<RESTPostAPIChatInputApplicationCom
 export type ContextMenuCommandData =
   SerializableOr<RESTPostAPIContextMenuApplicationCommandsJSONBody>;
 
-/**
- * Slash command handler definition.
- */
-export interface SlashCommandHandler {
-  __router_isSlashCommandHandler: true;
-  data: SlashCommandData;
+interface SlashCommandHandlerBase {
   execute: (interaction: ChatInputCommandInteraction) => Awaitable<void>;
   autocomplete?: (interaction: AutocompleteInteraction) => Awaitable<void>;
 }
 
+export interface SlashCommandHandlerDefinition extends SlashCommandHandlerBase {
+  data: SlashCommandData;
+}
+
+export interface SlashCommandHandler extends SlashCommandHandlerBase {
+  __router_isSlashCommandHandler: true;
+  data: ResolvedSerializableOr<SlashCommandData>;
+  toString(): string;
+}
+
+const SlashCommandPrototype = {
+  __router_isSlashCommandHandler: true,
+  toString(): string {
+    return `[SlashCommandHandler '${this.data?.name}']`;
+  },
+} satisfies Partial<SlashCommandHandler>;
+
 /**
  * Creates a slash command handler definition.
  */
-export function defineSlashCommand(
-  definition: Omit<SlashCommandHandler, '__router_isSlashCommandHandler'>,
-): SlashCommandHandler {
-  return {
-    ...definition,
-    __router_isSlashCommandHandler: true,
-  };
+export function defineSlashCommand(definition: SlashCommandHandlerDefinition): SlashCommandHandler {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  const instance = Object.create(SlashCommandPrototype) as typeof SlashCommandPrototype;
+  return Object.assign(instance, {
+    data: resolveSerializableOr(definition.data),
+    execute: definition.execute,
+    autocomplete: definition.autocomplete,
+  });
 }
 
 /**
@@ -49,25 +75,39 @@ export function isSlashCommandHandler(value: unknown): value is SlashCommandHand
   return value != null && typeof value === 'object' && '__router_isSlashCommandHandler' in value;
 }
 
-/**
- * Context menu command handler definition.
- */
-export interface ContextMenuCommandHandler {
-  __router_isContextMenuCommandHandler: true;
-  data: ContextMenuCommandData;
+interface ContextMenuCommandHandlerDefinitionBase {
   execute: (interaction: ContextMenuCommandInteraction) => Awaitable<void>;
 }
+
+export interface ContextMenuCommandHandlerDefinition extends ContextMenuCommandHandlerDefinitionBase {
+  data: ContextMenuCommandData;
+}
+
+export interface ContextMenuCommandHandler extends ContextMenuCommandHandlerDefinitionBase {
+  __router_isContextMenuCommandHandler: true;
+  data: ResolvedSerializableOr<ContextMenuCommandData>;
+  toString(): string;
+}
+
+const ContextMenuCommandPrototype = {
+  __router_isContextMenuCommandHandler: true,
+  toString(): string {
+    return `[ContextMenuCommandHandler '${this.data?.name}']`;
+  },
+} satisfies Partial<ContextMenuCommandHandler>;
 
 /**
  * Creates a context menu command handler definition.
  */
 export function defineContextMenuCommand(
-  definition: Omit<ContextMenuCommandHandler, '__router_isContextMenuCommandHandler'>,
+  definition: ContextMenuCommandHandlerDefinition,
 ): ContextMenuCommandHandler {
-  return {
-    ...definition,
-    __router_isContextMenuCommandHandler: true,
-  };
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  const instance = Object.create(ContextMenuCommandPrototype) as typeof ContextMenuCommandPrototype;
+  return Object.assign(instance, {
+    data: resolveSerializableOr(definition.data),
+    execute: definition.execute,
+  });
 }
 
 /**
