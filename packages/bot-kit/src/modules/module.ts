@@ -1,4 +1,4 @@
-import type { Container } from '../di/container.js';
+import type { Container } from '../di/index.js';
 
 export type LifecycleMethod = keyof Pick<FeatureModule, 'register' | 'boot' | 'shutdown'>;
 
