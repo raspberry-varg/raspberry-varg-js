@@ -15,12 +15,13 @@ import type { BotKitConfig } from '../core/index.js';
 const logger = discordLogger.namespaced('loader');
 
 export async function loadAllInteractions(config: BotKitConfig, client: Client) {
-  if (!config.paths.length) {
+  const paths = config.commandSync.paths;
+  if (!paths?.length) {
     return;
   }
 
   await Promise.allSettled(
-    config.paths.map((p) =>
+    paths.map((p) =>
       loadFolder(p, config, (module) => {
         for (const exported of Object.values(module)) {
           if (isSlashCommandHandler(exported)) {

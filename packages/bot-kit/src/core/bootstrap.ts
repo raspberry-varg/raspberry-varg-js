@@ -8,7 +8,12 @@ import { type AnyApplicationCommandsJSONBody, gatherCommandsToJson } from '../di
 import { initializeRouter } from '../discord/router.js';
 import { coreLog } from '../internal/coreLog.js';
 
-import { type BotKitConfig, type BootstrapConfigPartial, configure } from './config.js';
+import {
+  type BotKitConfig,
+  type BootstrapConfigPartial,
+  configure,
+  type CommandDeployment,
+} from './config.js';
 
 const hmr = globalThis as typeof globalThis & {
   hmr__discordClient?: Client;
@@ -25,13 +30,13 @@ export async function bootstrap(configPartial: BootstrapConfigPartial): Promise<
 
   let client: Client;
   if (!config.supportHotReloading) {
-    client = new Client(config.clientOptions);
+    client = new Client(config.client.options);
   } else {
     if (hmr.hmr__discordClient) {
       coreLog.info('🔥 HMR: Reusing existing client.');
       client = hmr.hmr__discordClient;
     } else {
-      client = new Client(config.clientOptions);
+      client = new Client(config.client.options);
     }
   }
 
@@ -48,7 +53,7 @@ export async function bootstrap(configPartial: BootstrapConfigPartial): Promise<
     return result;
   }
 
-  await client.login(config.clientToken);
+  await client.login(config.client.token);
   if (config.supportHotReloading) {
     hmr.hmr__discordClientLoggedIn = true;
   }
@@ -78,53 +83,32 @@ async function deployCommandsIfNecessary(config: BotKitConfig): Promise<void> {
   }
   coreLog.info('Detected command definition changes. Redeploying.');
 
-  await deployCommands(
-    config,
-    commands,
-    commandSync.target === 'global'
-      ? {
-          syncGlobally: true,
-        }
-      : {
-          syncGlobally: false,
-          guildIds:
-            typeof commandSync.testGuildIds === 'string'
-              ? [commandSync.testGuildIds]
-              : commandSync.testGuildIds,
-        },
-  );
+  await deployCommands(config, commands, commandSync.deploy);
 
   await commandSync.onSynced?.(currentHash);
 }
 
-type SyncCommandsOptions =
-  | {
-      syncGlobally?: false;
-      guildIds: readonly string[];
-    }
-  | {
-      syncGlobally: true;
-    };
-
 async function deployCommands(
   config: BotKitConfig,
   commands: readonly AnyApplicationCommandsJSONBody[],
-  options: SyncCommandsOptions,
+  options: CommandDeployment,
 ): Promise<void> {
-  const Rest = new REST({ version: '10' }).setToken(config.clientToken);
+  const Rest = new REST({ version: '10' }).setToken(config.client.token);
 
-  if (options.syncGlobally) {
+  if (options.target === 'global') {
     coreLog?.info('Syncing all global application commands...');
-    await Rest.put(Routes.applicationCommands(config.clientApplicationId), {
+    await Rest.put(Routes.applicationCommands(config.client.applicationId), {
       body: commands,
     });
   } else if (options.guildIds) {
     const putQueue = [];
-    const ids = options.guildIds;
+    const ids: readonly string[] = Array.isArray(options.guildIds)
+      ? options.guildIds
+      : [options.guildIds];
     for (const id of ids) {
       coreLog?.info(`Syncing guild application commands for guildId: ${id}`);
       putQueue.push(
-        Rest.put(Routes.applicationGuildCommands(config.clientApplicationId, id), {
+        Rest.put(Routes.applicationGuildCommands(config.client.applicationId, id), {
           body: commands,
         }),
       );

@@ -20,35 +20,40 @@ export type InteractionMiddleware = (
   next: () => Promise<void>,
 ) => void | Promise<void>;
 
+export type CommandDeployment =
+  | {
+      target: 'global';
+    }
+  | {
+      target: 'guilds';
+      guildIds: string | readonly string[];
+    };
+
 /**
  * Full configuration for BotKit.
  */
 export interface BotKitConfig extends AppConfig {
-  clientOptions: ClientOptions;
-  clientToken: string;
-  clientApplicationId: string;
-
-  paths: readonly string[];
+  client: {
+    options: ClientOptions;
+    token: string;
+    applicationId: string;
+  };
 
   commandSync: {
+    /**
+     * Paths to search for command and event handlers.
+     */
+    paths?: readonly string[];
     shouldSync: (newHash: string) => boolean | Promise<boolean>;
     onSynced?: (newHash: string) => void | Promise<void>;
-  } & (
-    | {
-        target: 'global';
-      }
-    | {
-        target: 'development';
-        testGuildIds: string | readonly string[];
-      }
-  );
+    deploy: CommandDeployment;
+  };
 
   interactionMiddleware: readonly InteractionMiddleware[];
 }
 
 const globalConfigDefaults = {
   ...appConfigDefaults,
-  paths: [] as BotKitConfig['paths'],
   interactionMiddleware: [] as BotKitConfig['interactionMiddleware'],
 } satisfies Partial<BotKitConfig>;
 
