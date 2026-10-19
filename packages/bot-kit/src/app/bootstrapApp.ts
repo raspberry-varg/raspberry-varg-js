@@ -35,8 +35,7 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
     const { shutdown, shutdownWithExit } = hmr.hmr__previousShutdown;
     await shutdown();
     if (shutdownWithExit) {
-      process.off('SIGINT', shutdownWithExit);
-      process.off('SIGTERM', shutdownWithExit);
+      removeShutdownHandler(shutdownWithExit);
     }
     hmr.hmr__previousShutdown = undefined;
   }
@@ -106,13 +105,19 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
 
   let shutdownWithExit: typeof shutdown | undefined;
   if (config.handleProcessSignals) {
-    shutdownWithExit = async () => {
+    let run = false;
+    const fn: typeof shutdown = (shutdownWithExit = async () => {
+      if (run) {
+        return;
+      }
+      run = true;
+      removeShutdownHandler(fn);
+
       previousModules.clear();
       await shutdown();
       process.exit(0);
-    };
-    process.on('SIGINT', shutdownWithExit);
-    process.on('SIGTERM', shutdownWithExit);
+    });
+    setShutdownHandler(fn);
   }
 
   if (config.supportHotReloading) {
@@ -170,4 +175,14 @@ function popPrevModulesToKill(
     }
   }
   return modulesToKill;
+}
+
+function setShutdownHandler(handler: ShutdownFn): void {
+  process.on('SIGINT', handler);
+  process.on('SIGTERM', handler);
+}
+
+function removeShutdownHandler(handler: ShutdownFn): void {
+  process.off('SIGINT', handler);
+  process.off('SIGTERM', handler);
 }
