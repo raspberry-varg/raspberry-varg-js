@@ -11,9 +11,7 @@ export interface FeatureModule {
   readonly __isFeatureModule: true;
 
   /**
-   * The name of the module.
-   *
-   * Mainly for debugging, no real use case right now.
+   * The name of the module. Must be unique across all modules.
    */
   name: string;
 
