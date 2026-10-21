@@ -1,8 +1,6 @@
 import { type AppConfig, appConfigDefaults } from '../app/config.js';
 
-import type { AnyCommandHandler, EventHandler } from '../discord/index.js';
-import type { AutoDiscoverable } from '../util/autoDiscover.js';
-import type { MaybeReadonlyArray } from '../util/maybeReadonlyArray.js';
+import type { ClientEventsModuleOptions, CommandModuleOptions } from '../modules/index.js';
 import type { ClientOptions, Interaction } from 'discord.js';
 
 /**
@@ -23,15 +21,6 @@ export type InteractionMiddleware = (
   next: () => Promise<void>,
 ) => void | Promise<void>;
 
-export type CommandDeployment =
-  | {
-      target: 'global';
-    }
-  | {
-      target: 'guilds';
-      guildIds: string | readonly string[];
-    };
-
 /**
  * Full configuration for BotKit.
  */
@@ -39,33 +28,21 @@ export interface BotKitConfig extends AppConfig {
   client: {
     options: ClientOptions;
     token: string;
-    applicationId: string;
   };
 
-  handlers: {
-    /**
-     * Command handlers or paths to search.
-     */
-    commands?: MaybeReadonlyArray<AutoDiscoverable<AnyCommandHandler>>;
-    /**
-     * Event handlers or paths to search.
-     */
-    clientEvents?: MaybeReadonlyArray<AutoDiscoverable<EventHandler>>;
-  };
+  /**
+   * Configuration for command handlers and syncing commands to the Discord client.
+   */
+  commands?: CommandModuleOptions;
 
-  commandSync: {
-    shouldSync: (newHash: string) => boolean | Promise<boolean>;
-    onSynced?: (newHash: string) => void | Promise<void>;
-    deploy: CommandDeployment;
-  };
-
-  interactionMiddleware: readonly InteractionMiddleware[];
+  /**
+   * Configuration for handling {@link import('discord.js').Client Client} events.
+   */
+  events?: ClientEventsModuleOptions;
 }
 
 const globalConfigDefaults = {
   ...appConfigDefaults,
-  handlers: {},
-  interactionMiddleware: [] as BotKitConfig['interactionMiddleware'],
 } satisfies Partial<BotKitConfig>;
 
 let globalConfig: BotKitConfig | undefined;
@@ -74,7 +51,7 @@ export function configure(options: BootstrapConfigPartial): BotKitConfig {
   if (globalConfig != null) {
     throw new Error('BotKit has already been configured.');
   }
-  globalConfig = { ...globalConfigDefaults, ...options };
+  globalConfig = { ...appConfigDefaults, ...options };
   return globalConfig;
 }
 

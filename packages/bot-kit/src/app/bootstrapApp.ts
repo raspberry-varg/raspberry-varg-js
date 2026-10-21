@@ -2,6 +2,7 @@ import { Container, setGlobalContainer } from '../di/container.js';
 import { coreLog } from '../internal/coreLog.js';
 import { type FeatureModule, isModule, type LifecycleMethod } from '../modules/index.js';
 import { resolveModuleGraph } from '../modules/resolveModuleGraph.js';
+import { InternalTokens } from '../modules/tokens.js';
 import { discoverAll } from '../util/autoDiscover.js';
 import { topologicalSort } from '../util/topologicalSort.js';
 
@@ -86,6 +87,9 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
     if (toKill.length) await executeAll(toKill.toReversed(), 'shutdown');
   }
 
+  const diffed = sortedModules.map((module) => previousModules.get(module.name) ?? module);
+  container.singleton(InternalTokens.Modules, () => diffed);
+
   if (!(await executeAll(sortedModules, 'register'))) {
     throw new Error('Failed to register one or more modules.');
   }
@@ -146,13 +150,23 @@ function sortModules(modules: readonly FeatureModule[]): FeatureModule[] {
       const resolved: string[] = [];
       for (let i = 0; i < dependsOn.length; i++) {
         const dependency = dependsOn[i];
-        if (dependency == null) {
-          throw new Error(
-            `Dependency for module '${module.name}' at index ${i} is undefined. Is there a ` +
-              `circular dependency?`,
-          );
+        let name: string;
+
+        if (typeof dependency === 'string') {
+          name = dependency;
+        } else {
+          if (dependency == null) {
+            throw new Error(
+              `Dependency for module '${module.name}' at index ${i} is undefined. Is there a ` +
+                `circular dependency?`,
+            );
+          }
+          name = dependency.name;
         }
-        resolved.push(dependency.name);
+        if (!name.length) {
+          throw new Error(`Dependency ID for module '${module.name}' at index ${i} is empty.`);
+        }
+        resolved.push(name);
       }
 
       return resolved;

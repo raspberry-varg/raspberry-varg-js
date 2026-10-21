@@ -8,9 +8,9 @@ export interface EventHandlerDefinition<K extends keyof ClientEvents> {
   /**
    * Disconnect the listener as soon as the first event is fired.
    */
-  once?: boolean;
-  event: K;
-  execute: (...args: [...ClientEvents[K], EventContext]) => void | Promise<void>;
+  readonly once?: boolean;
+  readonly event: K;
+  readonly execute: (...args: [...ClientEvents[K], EventContext]) => void | Promise<void>;
 }
 
 /**

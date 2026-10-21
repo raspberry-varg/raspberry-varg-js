@@ -10,6 +10,7 @@ type Lifetime = 'singleton' | 'transient';
 interface Entry {
   factory: ImplFactory<unknown>;
   lifetime: Lifetime;
+  locked?: boolean;
 }
 
 type ResolveTokenTuple<T extends readonly Token<unknown>[]> = {
@@ -36,6 +37,8 @@ export class Container {
     if (typeof token === 'function') {
       token = token.token;
     }
+
+    this.assertNotLocked(token);
 
     if (getConfig().supportHotReloading) {
       if (this.registry.delete(token)) {
@@ -109,6 +112,25 @@ export class Container {
     }
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     return instance as T;
+  }
+
+  lock(token: Token<unknown>): this {
+    const entry = this.registry.get(token);
+    if (!entry) {
+      throw new Error(`Tried to lock '${tokenToString(token)}', but it is not yet registered.`);
+    }
+    entry.locked = true;
+    return this;
+  }
+
+  private assertNotLocked(token: Token<unknown>) {
+    const existing = this.registry.get(token);
+    if (existing?.locked) {
+      throw new Error(
+        `Cannot overwrite '${tokenToString(token)}'. This binding is locked and can only be ` +
+          'injected.',
+      );
+    }
   }
 }
 

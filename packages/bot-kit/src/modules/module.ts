@@ -1,4 +1,7 @@
 import type { Container } from '../di/index.js';
+import type { AnyCommandHandler, EventHandler } from '../discord/index.js';
+import type { AutoDiscoverable } from '../util/autoDiscover.js';
+import type { MaybeReadonlyArray } from '../util/maybeReadonlyArray.js';
 
 export type LifecycleMethod = keyof Pick<FeatureModule, 'register' | 'boot' | 'shutdown'>;
 
@@ -18,12 +21,22 @@ export interface FeatureModule {
   /**
    * Modules that must be resolved before this module's lifecycle runs.
    */
-  dependsOn?: readonly FeatureModule[];
+  dependsOn?: ReadonlyArray<FeatureModule | string>;
 
   /**
    * If defined, the module will only be registered and booted if the function returns true.
    */
   enabled?: () => boolean;
+
+  /**
+   * Events that will be auto-bound to the active {@link import('discord.js').Client Client}.
+   */
+  events?: MaybeReadonlyArray<AutoDiscoverable<EventHandler>>;
+
+  /**
+   * Command handlers or paths to search.
+   */
+  commands?: MaybeReadonlyArray<AutoDiscoverable<AnyCommandHandler>>;
 
   /**
    * Set up any DI implementations.
@@ -64,7 +77,7 @@ export function defineModule(
   module: Omit<FeatureModule, '__isFeatureModule'>,
 ): Readonly<FeatureModule> {
   const instance = Object.create(ModulePrototype);
-  return Object.assign(instance, module);
+  return Object.freeze(Object.assign(instance, module));
 }
 
 export function isModule(module: unknown): module is FeatureModule {

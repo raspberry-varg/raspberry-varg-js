@@ -11,7 +11,9 @@ export function resolveModuleGraph(rootModules: readonly FeatureModule[]): Featu
     resolved.set(module.name, module);
     if (module.dependsOn) {
       for (const dependency of module.dependsOn) {
-        traverse(dependency);
+        if (typeof dependency !== 'string') {
+          traverse(dependency);
+        }
       }
     }
   };
