@@ -1,4 +1,4 @@
-import { getConfig } from '../core/index.js';
+import { assertNever } from '../util/assertNever.js';
 
 import { diLogger } from './logger.js';
 
@@ -21,8 +21,8 @@ type ResolveTokenTuple<T extends readonly Token<unknown>[]> = {
  * Dependency injection container. One is provided globally.
  */
 export class Container {
-  private registry = new Map<Token<unknown>, Entry>();
-  private singletons = new Map<Token<unknown>, unknown>();
+  private registry = new Map<string | symbol, Entry>();
+  private singletons = new Map<string | symbol, unknown>();
 
   /**
    * @deprecated Please explicitly define lifetime, or use {@link singleton} as a direct
@@ -34,25 +34,11 @@ export class Container {
    */
   register<T>(token: Token<T>, factory: ImplFactory<T>, lifetime: Lifetime): this;
   register<T>(token: Token<T>, factory: ImplFactory<T>, lifetime: Lifetime = 'singleton'): this {
-    if (typeof token === 'function') {
-      token = token.token;
-    }
-
+    token = tokenToString(token);
     this.assertNotLocked(token);
 
-    if (getConfig().supportHotReloading) {
-      if (this.registry.delete(token)) {
-        diLogger.verbose(`HMR: Overriding inject for ${tokenToString(token)}`);
-      }
-      if (this.singletons.delete(token)) {
-        diLogger.verbose(`HMR: Invalidating singleton instance for ${tokenToString(token)}`);
-      }
-    }
-
-    if (this.registry.has(token)) {
-      throw new Error(
-        `Injectable factory has already been registered with the token: ${tokenToString(token)}`,
-      );
+    if (this.registry.delete(token)) {
+      diLogger.debug(`Overriding inject for ${tokenToString(token)}`);
     }
     if (this.singletons.has(token)) {
       throw new Error(
@@ -79,6 +65,10 @@ export class Container {
     return this.register(token, factory, 'transient');
   }
 
+  value<T>(token: Token<T>, value: T): this {
+    return this.register(token, () => value, 'singleton');
+  }
+
   /**
    * Resolve multiple tokens to their registered instances.
    */
@@ -91,31 +81,29 @@ export class Container {
    * Resolve a token to its registered instance.
    */
   resolve<T>(token: Token<T>): T {
-    if (typeof token === 'function') {
-      token = token.token;
-    }
+    const stable = tokenToStable(token);
 
-    if (this.singletons.has(token)) {
+    if (this.singletons.has(stable)) {
       // oxlint-disable-next-line no-unsafe-type-assertion
-      return this.singletons.get(token) as T;
+      return this.singletons.get(stable) as T;
     }
 
-    const entry = this.registry.get(token);
+    const entry = this.registry.get(stable);
     if (!entry) {
       throw new Error(`Missing dependency: ${tokenToString(token)}`);
     }
 
-    diLogger.verbose(`Resolving ${tokenToString(token)}`);
+    diLogger.verbose(`Resolving ${tokenToString(stable)}`);
     const instance = entry.factory(this);
     if (entry.lifetime === 'singleton') {
-      this.singletons.set(token, instance);
+      this.singletons.set(stable, instance);
     }
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     return instance as T;
   }
 
   lock(token: Token<unknown>): this {
-    const entry = this.registry.get(token);
+    const entry = this.registry.get(tokenToStable(token));
     if (!entry) {
       throw new Error(`Tried to lock '${tokenToString(token)}', but it is not yet registered.`);
     }
@@ -124,7 +112,7 @@ export class Container {
   }
 
   private assertNotLocked(token: Token<unknown>) {
-    const existing = this.registry.get(token);
+    const existing = this.registry.get(tokenToStable(token));
     if (existing?.locked) {
       throw new Error(
         `Cannot overwrite '${tokenToString(token)}'. This binding is locked and can only be ` +
@@ -175,4 +163,20 @@ function tokenToString(token: Token<unknown>): string {
   }
 
   return String(token);
+}
+
+function tokenToStable(token: Token<unknown>): string | symbol {
+  if (typeof token === 'object') {
+    token = token.token;
+  }
+
+  if (typeof token === 'function') {
+    token = token.token;
+  }
+
+  if (typeof token !== 'string' && typeof token !== 'symbol') {
+    assertNever(token);
+  }
+
+  return token;
 }

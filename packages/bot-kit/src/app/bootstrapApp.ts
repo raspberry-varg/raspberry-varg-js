@@ -1,6 +1,11 @@
 import { Container, setGlobalContainer } from '../di/container.js';
 import { coreLog } from '../internal/coreLog.js';
-import { type FeatureModule, isModule, type LifecycleMethod } from '../modules/index.js';
+import {
+  type FeatureModule,
+  type FeatureModuleContext,
+  isModule,
+  type LifecycleMethod,
+} from '../modules/index.js';
 import { resolveModuleGraph } from '../modules/resolveModuleGraph.js';
 import { InternalTokens } from '../modules/tokens.js';
 import { discoverAll } from '../util/autoDiscover.js';
@@ -10,8 +15,7 @@ import type { AppConfig } from './config.js';
 
 const moduleLoaderLogger = coreLog.namespaced('modules').namespaced('loader');
 const hmr = globalThis as typeof globalThis & {
-  hmr__globalContainer?: Container;
-  hmr__previousModules?: Map<string, FeatureModule>;
+  hmr__previousGlobalContainer?: Container;
   hmr__previousShutdown?: {
     shutdown: BootstrapAppResult['shutdown'];
     shutdownWithExit?: ShutdownFn;
@@ -26,14 +30,13 @@ export interface BootstrapAppResult {
 }
 
 export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResult> {
-  const container = (config.supportHotReloading && hmr.hmr__globalContainer) || new Container();
+  const container = new Container();
   setGlobalContainer(container);
-  if (config.supportHotReloading) {
-    hmr.hmr__globalContainer = container;
-  }
 
-  if (config.supportHotReloading && hmr.hmr__previousShutdown) {
-    const { shutdown, shutdownWithExit } = hmr.hmr__previousShutdown;
+  const isHotReload = config.supportHotReloading && hmr.hmr__previousShutdown !== undefined;
+  if (isHotReload) {
+    const { shutdown, shutdownWithExit } = hmr.hmr__previousShutdown!;
+    moduleLoaderLogger.info('Hot reload detected. Shutting down previous modules.');
     await shutdown();
     if (shutdownWithExit) {
       removeShutdownHandler(shutdownWithExit);
@@ -41,19 +44,16 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
     hmr.hmr__previousShutdown = undefined;
   }
 
-  const previousModules: Map<string, FeatureModule> =
-    config.supportHotReloading && hmr.hmr__previousModules ? hmr.hmr__previousModules : new Map();
-
   const resolvedModules = await discoverAll(config.modules, isModule);
   const enabledModules = resolveModuleGraph(resolvedModules).filter(
     (m) => m.enabled == null || m.enabled(),
   );
   const sortedModules = sortModules(enabledModules);
-  const newModules = new Map(sortedModules.map((module) => [module.name, module]));
 
   const executeAll = async (
     modules: readonly FeatureModule[],
     method: LifecycleMethod,
+    ignoreSurvive: boolean,
   ): Promise<boolean> => {
     let errored = false;
 
@@ -64,14 +64,16 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
         moduleLoaderLogger.verbose(`${logPrefix} Skipping: Not provided`);
         continue;
       }
-      if (previousModules.has(module.name)) {
+      if (isHotReload && !ignoreSurvive && module.hmr?.surviveSoftReload) {
         moduleLoaderLogger.verbose(`${logPrefix} Skipping: Keep-alive`);
         continue;
       }
 
       try {
         moduleLoaderLogger.verbose(`${logPrefix} Executing...`);
-        await module[method](container);
+        await module[method](container, {
+          hmr: createHmrCtx(config),
+        });
         moduleLoaderLogger.verbose(`${logPrefix} Done.`);
       } catch (error) {
         moduleLoaderLogger.error(`${logPrefix} Error during execution`, error);
@@ -82,28 +84,18 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
     return !errored;
   };
 
-  if (previousModules.size) {
-    const toKill = popPrevModulesToKill(previousModules, newModules);
-    if (toKill.length) await executeAll(toKill.toReversed(), 'shutdown');
-  }
+  container.value(InternalTokens.Modules, sortedModules);
 
-  const diffed = sortedModules.map((module) => previousModules.get(module.name) ?? module);
-  container.singleton(InternalTokens.Modules, () => diffed);
-
-  if (!(await executeAll(sortedModules, 'register'))) {
+  if (!(await executeAll(sortedModules, 'register', true))) {
     throw new Error('Failed to register one or more modules.');
   }
 
-  if (!(await executeAll(sortedModules, 'boot'))) {
+  if (!(await executeAll(sortedModules, 'boot', false))) {
     throw new Error('Failed to boot one or more modules.');
   }
 
-  for (const module of sortedModules) {
-    previousModules.set(module.name, module);
-  }
-
   const shutdown: BootstrapAppResult['shutdown'] = async () => {
-    await executeAll(sortedModules.toReversed(), 'shutdown');
+    await executeAll(sortedModules.toReversed(), 'shutdown', false);
     moduleLoaderLogger.info('Module shutdown complete.');
   };
 
@@ -117,14 +109,15 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
       run = true;
       removeShutdownHandler(fn);
 
-      previousModules.clear();
-      await shutdown();
+      await executeAll(sortedModules.toReversed(), 'shutdown', true);
+      moduleLoaderLogger.info('Module shutdown complete. Exiting.');
       process.exit(0);
     });
     setShutdownHandler(fn);
   }
 
   if (config.supportHotReloading) {
+    hmr.hmr__previousGlobalContainer = container;
     hmr.hmr__previousShutdown = {
       shutdown,
       shutdownWithExit,
@@ -174,23 +167,6 @@ function sortModules(modules: readonly FeatureModule[]): FeatureModule[] {
   );
 }
 
-function popPrevModulesToKill(
-  previousModules: Map<string, FeatureModule>,
-  nextModules: ReadonlyMap<string, FeatureModule>,
-): FeatureModule[] {
-  const modulesToKill: FeatureModule[] = [];
-  for (const [name, prev] of previousModules) {
-    const next = nextModules.get(name);
-    const survive = next && prev.hmr?.surviveSoftReload && next.hmr?.surviveSoftReload;
-
-    if (!survive) {
-      previousModules.delete(name);
-      modulesToKill.push(prev);
-    }
-  }
-  return modulesToKill;
-}
-
 function setShutdownHandler(handler: ShutdownFn): void {
   process.on('SIGINT', handler);
   process.on('SIGTERM', handler);
@@ -199,4 +175,18 @@ function setShutdownHandler(handler: ShutdownFn): void {
 function removeShutdownHandler(handler: ShutdownFn): void {
   process.off('SIGINT', handler);
   process.off('SIGTERM', handler);
+}
+
+function createHmrCtx(config: AppConfig): FeatureModuleContext['hmr'] {
+  if (!config.supportHotReloading) {
+    return undefined;
+  }
+  return hmr.hmr__previousGlobalContainer
+    ? {
+        isReload: true,
+        previousContainer: hmr.hmr__previousGlobalContainer,
+      }
+    : {
+        isReload: false,
+      };
 }

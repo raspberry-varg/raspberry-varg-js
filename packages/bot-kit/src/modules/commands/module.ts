@@ -45,10 +45,6 @@ export interface CommandModuleOptions {
   };
 }
 
-const hmr = globalThis as typeof globalThis & {
-  hmr__isReload?: boolean;
-};
-
 const logger = coreLog.namespaced('CommandModule');
 export const CommandModule = Object.freeze({
   configure: (options: CommandModuleOptions): FeatureModule => {
@@ -66,7 +62,7 @@ export const CommandModule = Object.freeze({
           )
           .lock(BotKitTokens.CommandRouter);
       },
-      async boot(container) {
+      async boot(container, ctx) {
         const modules = container.resolve(InternalTokens.Modules);
         const client = container.resolve(BotKitTokens.Client);
         const commandRouter = container.resolve(BotKitTokens.CommandRouter);
@@ -86,7 +82,7 @@ export const CommandModule = Object.freeze({
         }
         commandRouter.listen(client);
 
-        if (!hmr.hmr__isReload) {
+        if (!ctx.hmr?.isReload) {
           const sync = options.sync;
           if (!sync) {
             return;
@@ -118,9 +114,6 @@ export const CommandModule = Object.freeze({
 
           await onSynced?.(currentHash);
         }
-
-        // TODO: I should make an HMR util lol.
-        hmr.hmr__isReload = true;
       },
       async shutdown(container) {
         const client = container.resolve(BotKitTokens.Client);

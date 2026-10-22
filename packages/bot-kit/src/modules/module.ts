@@ -5,9 +5,15 @@ import type { MaybeReadonlyArray } from '../util/maybeReadonlyArray.js';
 
 export type LifecycleMethod = keyof Pick<FeatureModule, 'register' | 'boot' | 'shutdown'>;
 
-export interface FeatureModuleAutoDiscovery {
-  root: string;
-  pattern: string;
+export interface FeatureModuleContext {
+  readonly hmr?:
+    | {
+        readonly isReload: false;
+      }
+    | {
+        readonly isReload: true;
+        readonly previousContainer: Container;
+      };
 }
 
 export interface FeatureModule {
@@ -41,19 +47,19 @@ export interface FeatureModule {
   /**
    * Set up any DI implementations.
    */
-  register?: (container: Container) => void | Promise<void>;
+  register?: (container: Container, ctx: FeatureModuleContext) => void | Promise<void>;
 
   /**
    * Start any workers, listeners, etc.
    *
    * Runs after all modules have called their {@link register} function.
    */
-  boot?: (container: Container) => void | Promise<void>;
+  boot?: (container: Container, ctx: FeatureModuleContext) => void | Promise<void>;
 
   /**
    * Tear down anything before the application shuts down.
    */
-  shutdown?: (container: Container) => void | Promise<void>;
+  shutdown?: (container: Container, ctx: FeatureModuleContext) => void | Promise<void>;
 
   /**
    * Configuration specific to HMR.

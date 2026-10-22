@@ -13,7 +13,7 @@ export const ClientModule = Object.freeze({
     return defineModule({
       name: BotKitModules.Client,
       register(container) {
-        container.singleton(BotKitTokens.Client, () => options.client).lock(BotKitTokens.Client);
+        container.value(BotKitTokens.Client, options.client).lock(BotKitTokens.Client);
       },
       async boot(container) {
         const client = container.resolve(BotKitTokens.Client);
