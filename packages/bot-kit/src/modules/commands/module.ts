@@ -98,6 +98,7 @@ export const CommandModule = Object.freeze({
             logger.info('No commands provided. Skipping deployment.');
             return;
           }
+          logger.info(`Found ${commands.length} command(s).`);
           commands.sort((a, b) => a.name.localeCompare(b.name));
 
           const currentHash = crypto

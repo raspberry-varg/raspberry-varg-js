@@ -18,6 +18,7 @@ export const ClientModule = Object.freeze({
       async boot(container) {
         const client = container.resolve(BotKitTokens.Client);
         await client.login(options.token);
+        await client.application.emojis.fetch();
       },
       async shutdown(container) {
         const client = container.resolve(BotKitTokens.Client);

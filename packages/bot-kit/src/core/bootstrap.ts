@@ -1,6 +1,7 @@
 import { Client } from 'discord.js';
 
 import { bootstrapApp, type BootstrapAppResult } from '../app/bootstrapApp.js';
+import { hydrateAppEmojis } from '../emojis/emojis.js';
 import {
   ClientEventsModule,
   ClientModule,
@@ -45,8 +46,11 @@ export async function bootstrap(configPartial: BootstrapConfigPartial): Promise<
     modules,
   });
 
+  const client = bootstrapAppResult.container.resolve(BotKitTokens.Client);
+  hydrateAppEmojis(client.application);
+
   return {
     ...bootstrapAppResult,
-    client: bootstrapAppResult.container.resolve(BotKitTokens.Client),
+    client,
   };
 }
