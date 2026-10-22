@@ -5,7 +5,9 @@ import { loadFolder } from './loadFolder.js';
 import type { MaybeReadonlyArray } from './maybeReadonlyArray.js';
 import type { TypeGuard } from './typeGuard.js';
 
-export type AutoDiscoverable<T> = T | DiscoverSearchOptions;
+export type AutoDiscoverable<T> = T | DiscoverableSearch;
+
+export type DiscoverableSearch = string | DiscoverSearchOptions;
 
 export interface DiscoverSearchOptions {
   root: string;
@@ -29,10 +31,18 @@ export async function discoverAll<T>(
 }
 
 export async function discover<T>(
-  options: DiscoverSearchOptions,
+  options: DiscoverableSearch,
   typeGuard: TypeGuard<T>,
 ): Promise<T[]> {
-  const { root, pattern } = options;
+  let root: string;
+  let pattern: string | undefined;
+  if (typeof options === 'string') {
+    root = process.cwd();
+    pattern = options;
+  } else {
+    root = options.root;
+    pattern = options.pattern;
+  }
   const loaded = await loadFolder(root, pattern);
   const discovered: T[] = [];
   for (let i = 0; i < loaded.length; i++) {
