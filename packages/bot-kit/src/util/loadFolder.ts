@@ -1,6 +1,4 @@
-import path from 'node:path';
-
-import bun from 'bun';
+import { Glob } from 'bun';
 
 import { coreLog } from '../internal/coreLog.js';
 
@@ -10,22 +8,21 @@ const logger = coreLog.namespaced('FileLoader');
 
 export async function loadFolder(dirPath: string, pattern: string | undefined) {
   pattern ||= DefaultPattern ??= createDefaultPattern();
-  const glob = new bun.Glob(pattern);
-  const filePaths = glob.scan(dirPath);
+  const glob = new Glob(pattern);
+  const filePaths = glob.scan({ cwd: dirPath, absolute: true });
   const importOps: Array<Promise<ImportedModule>> = [];
 
   let successCount = 0;
   for await (const file of filePaths) {
-    const fullPath = path.join(dirPath, file);
     importOps.push(
-      import(fullPath)
+      import(file)
         .then((module) => {
           successCount++;
-          logger.verbose(`Loaded ${fullPath}`);
+          logger.verbose(`Loaded ${file}`);
           return module;
         })
         .catch((e: unknown) => {
-          logger.error(`Failed to load ${fullPath}`, e);
+          logger.error(`Failed to load ${file}`, e);
         }),
     );
   }
