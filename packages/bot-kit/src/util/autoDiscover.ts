@@ -14,6 +14,15 @@ export interface DiscoverSearchOptions {
   pattern?: string;
 }
 
+export function normalizeSearch<T extends DiscoverableSearch>(
+  options: T,
+): Extract<T, DiscoverSearchOptions> {
+  if (typeof options === 'string') {
+    return { root: process.cwd(), pattern: options } as Extract<T, DiscoverSearchOptions>;
+  }
+  return options as Extract<T, DiscoverSearchOptions>;
+}
+
 export async function discoverAll<T>(
   autos: MaybeReadonlyArray<AutoDiscoverable<T>>,
   typeGuard: TypeGuard<T>,
