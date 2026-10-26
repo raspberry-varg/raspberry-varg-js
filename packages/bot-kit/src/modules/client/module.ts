@@ -12,7 +12,13 @@ export const ClientModule = Object.freeze({
   configure: (options: ClientModuleOptions): FeatureModule => {
     return defineModule({
       name: BotKitModules.Client,
-      register(container) {
+      register(container, { hmr }) {
+        if (hmr?.isReload) {
+          container
+            .value(BotKitTokens.Client, hmr.previousContainer.resolve(BotKitTokens.Client))
+            .lock(BotKitTokens.Client);
+          return;
+        }
         container.value(BotKitTokens.Client, options.client).lock(BotKitTokens.Client);
       },
       async boot(container) {
