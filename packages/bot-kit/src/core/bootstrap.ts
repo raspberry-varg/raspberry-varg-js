@@ -48,11 +48,10 @@ export async function bootstrap(configPartial: BootstrapConfigPartial): Promise<
     ...config,
     modules,
   });
-  if (!bootstrapAppResult) {
-    throw new Error('Bootstrap failed');
-  }
 
-  hydrateAppEmojis(client.application!);
+  if (client.isReady()) {
+    hydrateAppEmojis(client.application);
+  }
 
   return {
     ...bootstrapAppResult,

@@ -29,7 +29,7 @@ export interface BootstrapAppResult {
   shutdown: ShutdownFn;
 }
 
-export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResult | null> {
+export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResult> {
   const container = new Container();
   setGlobalContainer(container);
 
