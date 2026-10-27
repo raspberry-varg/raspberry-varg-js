@@ -48,9 +48,6 @@ export async function bootstrap(configPartial: BootstrapConfigPartial): Promise<
     ...config,
     modules,
   });
-  await new Promise((res) => {
-    setTimeout(res, 5_000);
-  });
   if (!bootstrapAppResult) {
     throw new Error('Bootstrap failed');
   }
