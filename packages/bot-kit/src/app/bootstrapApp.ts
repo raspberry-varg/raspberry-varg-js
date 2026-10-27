@@ -9,18 +9,18 @@ import {
 import { resolveModuleGraph } from '../modules/resolveModuleGraph.js';
 import { InternalTokens } from '../modules/tokens.js';
 import { discoverAll } from '../util/autoDiscover.js';
+import { Hmr } from '../util/hmr.js';
 import { topologicalSort } from '../util/topologicalSort.js';
 
 import type { AppConfig } from './config.js';
 
 const moduleLoaderLogger = coreLog.namespaced('modules').namespaced('loader');
-const hmr = globalThis as typeof globalThis & {
-  hmr__previousGlobalContainer?: Container;
-  hmr__previousShutdown?: {
-    shutdown: BootstrapAppResult['shutdown'];
-    shutdownWithExit?: ShutdownFn;
-  };
-};
+
+const PreviousGlobalContainerKey = Hmr.key<Container>('bootstrapApp.previousGlobalContainer');
+const PreviousShutdownKey = Hmr.key<{
+  shutdown: BootstrapAppResult['shutdown'];
+  shutdownWithExit?: ShutdownFn;
+}>('bootstrapApp.previousShutdown');
 
 type ShutdownFn = () => Promise<void>;
 
@@ -29,19 +29,27 @@ export interface BootstrapAppResult {
   shutdown: ShutdownFn;
 }
 
-export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResult> {
+export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResult | null> {
   const container = new Container();
   setGlobalContainer(container);
 
-  const isHotReload = config.supportHotReloading && hmr.hmr__previousShutdown !== undefined;
-  if (isHotReload) {
-    const { shutdown, shutdownWithExit } = hmr.hmr__previousShutdown!;
+  const previousContainer = Hmr.popRef(PreviousGlobalContainerKey);
+
+  if (Hmr.isHotReload) {
+    const previousShutdown = Hmr.popRef(PreviousShutdownKey);
     moduleLoaderLogger.info('Hot reload detected. Shutting down previous modules.');
-    await shutdown();
-    if (shutdownWithExit) {
-      removeShutdownHandler(shutdownWithExit);
+    if (previousContainer) {
+      await executeAll(
+        previousContainer,
+        previousContainer.resolve(InternalTokens.Modules).toReversed(),
+        'shutdown',
+        false,
+        previousContainer,
+      );
     }
-    hmr.hmr__previousShutdown = undefined;
+    if (previousShutdown?.shutdownWithExit) {
+      removeShutdownHandler(previousShutdown.shutdownWithExit);
+    }
   }
 
   const resolvedModules = await discoverAll(config.modules, isModule);
@@ -50,52 +58,18 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
   );
   const sortedModules = sortModules(enabledModules);
 
-  const executeAll = async (
-    modules: readonly FeatureModule[],
-    method: LifecycleMethod,
-    ignoreSurvive: boolean,
-  ): Promise<boolean> => {
-    let errored = false;
-
-    for (let i = 0; i < modules.length; i++) {
-      const module = modules[i];
-      const logPrefix = `(Module ➔ ${method} ${i + 1}/${modules.length}) ${module.name} \t-`;
-      if (module[method] == null) {
-        moduleLoaderLogger.verbose(`${logPrefix} Skipping: Not provided`);
-        continue;
-      }
-      if (isHotReload && !ignoreSurvive && module.hmr?.surviveSoftReload) {
-        moduleLoaderLogger.verbose(`${logPrefix} Skipping: Keep-alive`);
-        continue;
-      }
-
-      try {
-        moduleLoaderLogger.verbose(`${logPrefix} Executing...`);
-        await module[method](container, {
-          hmr: createHmrCtx(config),
-        });
-        moduleLoaderLogger.verbose(`${logPrefix} Done.`);
-      } catch (error) {
-        moduleLoaderLogger.error(`${logPrefix} Error during execution`, error);
-        errored = true;
-      }
-    }
-
-    return !errored;
-  };
-
   container.value(InternalTokens.Modules, sortedModules);
 
-  if (!(await executeAll(sortedModules, 'register', true))) {
+  if (!(await executeAll(container, sortedModules, 'register', true, previousContainer))) {
     throw new Error('Failed to register one or more modules.');
   }
 
-  if (!(await executeAll(sortedModules, 'boot', false))) {
+  if (!(await executeAll(container, sortedModules, 'boot', false, previousContainer))) {
     throw new Error('Failed to boot one or more modules.');
   }
 
   const shutdown: BootstrapAppResult['shutdown'] = async () => {
-    await executeAll(sortedModules.toReversed(), 'shutdown', false);
+    await executeAll(container, sortedModules.toReversed(), 'shutdown', false, previousContainer);
     moduleLoaderLogger.info('Module shutdown complete.');
   };
 
@@ -109,7 +83,7 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
       run = true;
       removeShutdownHandler(fn);
 
-      await executeAll(sortedModules.toReversed(), 'shutdown', true);
+      await executeAll(container, sortedModules.toReversed(), 'shutdown', true, previousContainer);
       moduleLoaderLogger.info('Module shutdown complete. Exiting.');
       process.exit(0);
     });
@@ -117,11 +91,11 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
   }
 
   if (config.supportHotReloading) {
-    hmr.hmr__previousGlobalContainer = container;
-    hmr.hmr__previousShutdown = {
+    Hmr.setRef(PreviousGlobalContainerKey, container);
+    Hmr.setRef(PreviousShutdownKey, {
       shutdown,
       shutdownWithExit,
-    };
+    });
   }
 
   return {
@@ -177,16 +151,51 @@ function removeShutdownHandler(handler: ShutdownFn): void {
   process.off('SIGTERM', handler);
 }
 
-function createHmrCtx(config: AppConfig): FeatureModuleContext['hmr'] {
-  if (!config.supportHotReloading) {
-    return undefined;
-  }
-  return hmr.hmr__previousGlobalContainer
+function createHmrCtx(
+  previousContainer: Container | undefined,
+): NonNullable<FeatureModuleContext['hmr']> {
+  return previousContainer
     ? {
         isReload: true,
-        previousContainer: hmr.hmr__previousGlobalContainer,
+        previousContainer,
       }
     : {
         isReload: false,
       };
+}
+
+async function executeAll(
+  container: Container,
+  modules: readonly FeatureModule[],
+  method: LifecycleMethod,
+  ignoreSurvive: boolean,
+  previousContainerForHmr: Container | undefined,
+): Promise<boolean> {
+  let errored = false;
+
+  for (let i = 0; i < modules.length; i++) {
+    const module = modules[i];
+    const logPrefix = `(Module ➔ ${method} ${i + 1}/${modules.length}) ${module.name} \t-`;
+    if (module[method] == null) {
+      moduleLoaderLogger.verbose(`${logPrefix} Skipping: Not provided`);
+      continue;
+    }
+    if (Hmr.isHotReload && !ignoreSurvive && module.hmr?.surviveSoftReload) {
+      moduleLoaderLogger.verbose(`${logPrefix} Skipping: Keep-alive`);
+      continue;
+    }
+
+    try {
+      moduleLoaderLogger.verbose(`${logPrefix} Executing...`);
+      await module[method](container, {
+        hmr: previousContainerForHmr ? createHmrCtx(previousContainerForHmr) : undefined,
+      });
+      moduleLoaderLogger.verbose(`${logPrefix} Done.`);
+    } catch (error) {
+      moduleLoaderLogger.error(`${logPrefix} Error during execution`, error);
+      errored = true;
+    }
+  }
+
+  return !errored;
 }

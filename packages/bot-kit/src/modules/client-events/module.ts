@@ -13,10 +13,10 @@ export interface ClientEventsModuleOptions {
   global?: MaybeReadonlyArray<AutoDiscoverable<EventHandler>>;
 }
 
-export const ClientEventsModule = Object.freeze({
+export const ClientEventsModule = {
   configure: (options: ClientEventsModuleOptions): FeatureModule => {
     return defineModule({
-      name: 'BotKit.ClientEvents',
+      name: BotKitModules.ClientEvents,
       dependsOn: [BotKitModules.Client],
       register(container) {
         container
@@ -50,4 +50,5 @@ export const ClientEventsModule = Object.freeze({
       },
     });
   },
-});
+} as const;
+Object.freeze(ClientEventsModule);

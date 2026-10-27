@@ -8,7 +8,7 @@ import {
   CommandModule,
   type FeatureModule,
 } from '../modules/index.js';
-import { BotKitTokens } from '../modules/tokens.js';
+import { Hmr } from '../util/hmr.js';
 import { resolveMaybeReadonlyArray } from '../util/maybeReadonlyArray.js';
 
 import { type BootstrapConfigPartial, configure } from './config.js';
@@ -19,12 +19,15 @@ export interface BootstrapResult extends BootstrapAppResult {
   client: Client;
 }
 
+const ClientKey = Hmr.key<Client>('Client');
+
 export async function bootstrap(configPartial: BootstrapConfigPartial): Promise<BootstrapResult> {
   const config = configure(configPartial);
 
+  const client = Hmr.ref(ClientKey, () => new Client(config.client.options));
   const modules: Array<AutoDiscoverable<FeatureModule>> = [
     ClientModule.configure({
-      client: new Client(config.client.options),
+      client,
       token: config.client.token,
     }),
   ];
@@ -45,9 +48,14 @@ export async function bootstrap(configPartial: BootstrapConfigPartial): Promise<
     ...config,
     modules,
   });
+  await new Promise((res) => {
+    setTimeout(res, 5_000);
+  });
+  if (!bootstrapAppResult) {
+    throw new Error('Bootstrap failed');
+  }
 
-  const client = bootstrapAppResult.container.resolve(BotKitTokens.Client);
-  hydrateAppEmojis(client.application);
+  hydrateAppEmojis(client.application!);
 
   return {
     ...bootstrapAppResult,

@@ -1,19 +1,27 @@
 import { Client } from 'discord.js';
 
+import { coreLog } from '../../internal/coreLog.js';
 import { defineModule, type FeatureModule } from '../module.js';
-import { BotKitTokens, BotKitModules } from '../tokens.js';
+import { BotKitModules, BotKitTokens } from '../tokens.js';
 
 interface ClientModuleOptions {
   client: Client;
   token: string;
 }
 
-export const ClientModule = Object.freeze({
+const logger = coreLog.namespaced('ClientModule');
+export const ClientModule = {
   configure: (options: ClientModuleOptions): FeatureModule => {
     return defineModule({
       name: BotKitModules.Client,
+      hmr: {
+        surviveSoftReload: true,
+      },
       register(container, { hmr }) {
+        console.log({ hmr });
         if (hmr?.isReload) {
+          console.log('KEEPING CLIENT CONNECTION ALIVE');
+          console.log('IS READY', hmr.previousContainer.resolve(BotKitTokens.Client).isReady());
           container
             .value(BotKitTokens.Client, hmr.previousContainer.resolve(BotKitTokens.Client))
             .lock(BotKitTokens.Client);
@@ -23,16 +31,22 @@ export const ClientModule = Object.freeze({
       },
       async boot(container) {
         const client = container.resolve(BotKitTokens.Client);
+        if (client.isReady()) {
+          logger.debug('Client already ready, skipping login and emoji fetch.');
+          return;
+        }
+
         await client.login(options.token);
-        await client.application.emojis.fetch();
+        if (client.isReady()) {
+          await client.application.emojis.fetch();
+        }
       },
       async shutdown(container) {
+        console.log('SHUTTING DOWN CLIENT NOOOO');
         const client = container.resolve(BotKitTokens.Client);
         await client.destroy();
       },
-      hmr: {
-        surviveSoftReload: true,
-      },
     });
   },
-});
+} as const;
+Object.freeze(ClientModule);

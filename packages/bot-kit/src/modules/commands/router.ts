@@ -92,6 +92,9 @@ export class CommandRouterImpl implements CommandRouter {
         logger.warn(`No handler found for command: ${interaction.commandName}`);
         return;
       }
+      console.log(`Executing slash command: ${interaction.commandName}`);
+      await handler.execute(interaction);
+      console.log(`Slash command executed: ${interaction.commandName}`);
     }
     if (interaction.isAutocomplete()) {
       logger.verbose(`Received autocomplete request: ${interaction.commandName}`);

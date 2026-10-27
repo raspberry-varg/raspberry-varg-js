@@ -46,7 +46,7 @@ export interface CommandModuleOptions {
 }
 
 const logger = coreLog.namespaced('CommandModule');
-export const CommandModule = Object.freeze({
+export const CommandModule = {
   configure: (options: CommandModuleOptions): FeatureModule => {
     return defineModule({
       name: BotKitModules.Commands,
@@ -88,6 +88,10 @@ export const CommandModule = Object.freeze({
             return;
           }
 
+          if (!client.isReady()) {
+            throw new Error('Client is not ready. Commands cannot be deployed.');
+          }
+
           const { shouldSync, onSynced, deploy } = sync;
 
           const commands = [
@@ -123,4 +127,5 @@ export const CommandModule = Object.freeze({
       },
     });
   },
-});
+} as const;
+Object.freeze(CommandModule);
