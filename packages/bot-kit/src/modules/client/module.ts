@@ -18,10 +18,7 @@ export const ClientModule = {
         surviveSoftReload: true,
       },
       register(container, { hmr }) {
-        console.log({ hmr });
         if (hmr?.isReload) {
-          console.log('KEEPING CLIENT CONNECTION ALIVE');
-          console.log('IS READY', hmr.previousContainer.resolve(BotKitTokens.Client).isReady());
           container
             .value(BotKitTokens.Client, hmr.previousContainer.resolve(BotKitTokens.Client))
             .lock(BotKitTokens.Client);
@@ -42,7 +39,6 @@ export const ClientModule = {
         }
       },
       async shutdown(container) {
-        console.log('SHUTTING DOWN CLIENT NOOOO');
         const client = container.resolve(BotKitTokens.Client);
         await client.destroy();
       },
