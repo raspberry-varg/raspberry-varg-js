@@ -34,9 +34,22 @@ export const ClientModule = {
         }
 
         await client.login(options.token);
-        if (client.isReady()) {
-          await client.application.emojis.fetch();
+        if (!client.isReady()) {
+          let timeout: NodeJS.Timeout | undefined;
+          await new Promise<void>((res, rej) => {
+            timeout = setTimeout(() => {
+              rej(new Error('Client did not become ready within timeout'));
+            }, 10_000);
+            logger.debug('Waiting for client to become ready...');
+            client.once('ready', () => {
+              logger.debug('Client is now ready, continuing boot.');
+              clearTimeout(timeout);
+              res();
+            });
+          });
         }
+
+        await client.application!.emojis.fetch();
       },
       async shutdown(container) {
         const client = container.resolve(BotKitTokens.Client);

@@ -49,9 +49,10 @@ export async function bootstrap(configPartial: BootstrapConfigPartial): Promise<
     modules,
   });
 
-  if (client.isReady()) {
-    hydrateAppEmojis(client.application);
+  if (!client.isReady()) {
+    throw new Error('Client is not ready');
   }
+  hydrateAppEmojis(client.application);
 
   return {
     ...bootstrapAppResult,
