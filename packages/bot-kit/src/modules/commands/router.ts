@@ -92,11 +92,6 @@ export class CommandRouterImpl implements CommandRouter {
         logger.warn(`No handler found for command: ${interaction.commandName}`);
         return;
       }
-      if (handler.autocomplete && interaction.isAutocomplete()) {
-        await handler.autocomplete(interaction);
-      } else {
-        await handler.execute(interaction);
-      }
     }
     if (interaction.isAutocomplete()) {
       logger.verbose(`Received autocomplete request: ${interaction.commandName}`);
