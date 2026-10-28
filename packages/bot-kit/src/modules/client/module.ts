@@ -1,4 +1,4 @@
-import { Client } from 'discord.js';
+import { Client, Events } from 'discord.js';
 
 import { coreLog } from '../../internal/coreLog.js';
 import { defineModule, type FeatureModule } from '../module.js';
@@ -41,7 +41,7 @@ export const ClientModule = {
               rej(new Error('Client did not become ready within timeout'));
             }, 10_000);
             logger.debug('Waiting for client to become ready...');
-            client.once('ready', () => {
+            client.once(Events.ClientReady, () => {
               logger.debug('Client is now ready, continuing boot.');
               clearTimeout(timeout);
               res();
