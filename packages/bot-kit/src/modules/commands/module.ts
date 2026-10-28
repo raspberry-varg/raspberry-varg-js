@@ -2,7 +2,7 @@ import crypto from 'crypto';
 
 import { type AnyCommandHandler, isAnyCommandHandler } from '../../discord/index.js';
 import { coreLog } from '../../internal/coreLog.js';
-import { type AutoDiscoverable, discoverAll } from '../../util/autoDiscover.js';
+import { type AutoDiscoverable, discoverAll, normalizeSearch } from '../../util/autoDiscover.js';
 import {
   type MaybeReadonlyArray,
   resolveMaybeReadonlyArray,
@@ -73,7 +73,16 @@ export const CommandModule = {
         }
         for (const module of modules) {
           if (module.commands) {
-            discoverable.push(...resolveMaybeReadonlyArray(module.commands));
+            const root = module.root ?? module.__dirname;
+            if (!root) {
+              throw new Error(
+                'Module must define a root or __dirname property when auto-discovering commands.',
+              );
+            }
+            const commands = resolveMaybeReadonlyArray(module.commands).map((command) =>
+              isAnyCommandHandler(command) ? command : normalizeSearch(command, root),
+            );
+            discoverable.push(...commands);
           }
         }
         const discovered = await discoverAll(discoverable, isAnyCommandHandler);

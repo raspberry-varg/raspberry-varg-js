@@ -35,6 +35,17 @@ export interface FeatureModule {
   enabled?: () => boolean;
 
   /**
+   * Where to start resolving relative paths from.
+   */
+  root?: string;
+
+  /**
+   * Where to start resolving relative paths from.
+   * @alias root
+   */
+  __dirname?: string;
+
+  /**
    * Events that will be auto-bound to the active {@link import('discord.js').Client Client}.
    */
   events?: MaybeReadonlyArray<AutoDiscoverable<EventHandler>>;

@@ -1,5 +1,5 @@
 import { type EventHandler, isEventHandler } from '../../discord/index.js';
-import { type AutoDiscoverable, discoverAll } from '../../util/autoDiscover.js';
+import { type AutoDiscoverable, discoverAll, normalizeSearch } from '../../util/autoDiscover.js';
 import {
   type MaybeReadonlyArray,
   resolveMaybeReadonlyArray,
@@ -34,7 +34,16 @@ export const ClientEventsModule = {
         }
         for (const module of modules) {
           if (module.events) {
-            discoverable.push(...resolveMaybeReadonlyArray(module.events));
+            const root = module.root ?? module.__dirname;
+            if (!root) {
+              throw new Error(
+                'Module must define a root or __dirname property when auto-discovering events.',
+              );
+            }
+            const events = resolveMaybeReadonlyArray(module.events).map((event) =>
+              isEventHandler(event) ? event : normalizeSearch(event, root),
+            );
+            discoverable.push(...events);
           }
         }
         const discovered = await discoverAll(discoverable, isEventHandler);

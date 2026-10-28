@@ -1,3 +1,5 @@
+// oxlint-disable typescript/no-unsafe-type-assertion
+
 const RegistryKey = Symbol.for('raspberryvarg.bot-kit.hmr.Registry');
 
 const hmr = globalThis as typeof globalThis & {

@@ -1,3 +1,5 @@
+// oxlint-disable typescript/no-unsafe-type-assertion
+
 import { coreLog } from '../internal/coreLog.js';
 
 import { loadFolder } from './loadFolder.js';
@@ -16,9 +18,10 @@ export interface DiscoverSearchOptions {
 
 export function normalizeSearch<T extends DiscoverableSearch>(
   options: T,
+  root = process.cwd(),
 ): Extract<T, DiscoverSearchOptions> {
   if (typeof options === 'string') {
-    return { root: process.cwd(), pattern: options } as Extract<T, DiscoverSearchOptions>;
+    return { root, pattern: options } as Extract<T, DiscoverSearchOptions>;
   }
   return options as Extract<T, DiscoverSearchOptions>;
 }
@@ -43,15 +46,7 @@ export async function discover<T>(
   options: DiscoverableSearch,
   typeGuard: TypeGuard<T>,
 ): Promise<T[]> {
-  let root: string;
-  let pattern: string | undefined;
-  if (typeof options === 'string') {
-    root = process.cwd();
-    pattern = options;
-  } else {
-    root = options.root;
-    pattern = options.pattern;
-  }
+  const { root, pattern } = normalizeSearch(options);
   const loaded = await loadFolder(root, pattern);
   const discovered: T[] = [];
   for (let i = 0; i < loaded.length; i++) {
