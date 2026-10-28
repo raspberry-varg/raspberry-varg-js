@@ -68,6 +68,10 @@ export async function bootstrapApp(config: AppConfig): Promise<BootstrapAppResul
     throw new Error('Failed to boot one or more modules.');
   }
 
+  if (!(await executeAll(container, sortedModules, 'start', false, previousContainer))) {
+    throw new Error('Failed to start one or more modules.');
+  }
+
   const shutdown: BootstrapAppResult['shutdown'] = async () => {
     await executeAll(container, sortedModules.toReversed(), 'shutdown', false, previousContainer);
     moduleLoaderLogger.info('Module shutdown complete.');

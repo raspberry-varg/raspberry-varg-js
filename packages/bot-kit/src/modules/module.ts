@@ -3,7 +3,7 @@ import type { AnyCommandHandler, EventHandler } from '../discord/index.js';
 import type { AutoDiscoverable } from '../util/autoDiscover.js';
 import type { MaybeReadonlyArray } from '../util/maybeReadonlyArray.js';
 
-export type LifecycleMethod = keyof Pick<FeatureModule, 'register' | 'boot' | 'shutdown'>;
+export type LifecycleMethod = keyof Pick<FeatureModule, 'register' | 'boot' | 'start' | 'shutdown'>;
 
 export interface FeatureModuleContext {
   readonly hmr?:
@@ -66,6 +66,13 @@ export interface FeatureModule {
    * Runs after all modules have called their {@link register} function.
    */
   boot?: (container: Container, ctx: FeatureModuleContext) => void | Promise<void>;
+
+  /**
+   * Start any network connections.
+   *
+   * Runs after all modules have called their {@link boot} function.
+   */
+  start?: (container: Container, ctx: FeatureModuleContext) => void | Promise<void>;
 
   /**
    * Tear down anything before the application shuts down.

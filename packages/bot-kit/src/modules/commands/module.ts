@@ -62,7 +62,7 @@ export const CommandModule = {
           )
           .lock(BotKitTokens.CommandRouter);
       },
-      async boot(container, ctx) {
+      async boot(container) {
         const modules = container.resolve(InternalTokens.Modules);
         const client = container.resolve(BotKitTokens.Client);
         const commandRouter = container.resolve(BotKitTokens.CommandRouter);
@@ -90,44 +90,42 @@ export const CommandModule = {
           commandRouter.register(handler);
         }
         commandRouter.listen(client);
-
-        if (!ctx.hmr?.isReload) {
-          const sync = options.sync;
-          if (!sync) {
-            return;
-          }
-
-          if (!client.isReady()) {
-            throw new Error('Client is not ready. Commands cannot be deployed.');
-          }
-
-          const { shouldSync, onSynced, deploy } = sync;
-
-          const commands = [
-            ...commandRouter.getSlashCommands().map((handler) => handler.data),
-            ...commandRouter.getContextMenuCommands().map((handler) => handler.data),
-          ].map((serializableOr) => resolveSerializableOr(serializableOr));
-          if (!commands.length) {
-            logger.info('No commands provided. Skipping deployment.');
-            return;
-          }
-          logger.info(`Found ${commands.length} command(s).`);
-          commands.sort((a, b) => a.name.localeCompare(b.name));
-
-          const currentHash = crypto
-            .createHash('md5')
-            .update(JSON.stringify(commands))
-            .digest('hex');
-          if (!(await shouldSync(currentHash))) {
-            logger.info('Commands are up to date. Skipping deployment.');
-            return;
-          }
-          logger.info('Detected command definition changes. Redeploying.');
-
-          await deployCommands(logger, client, commands, deploy);
-
-          await onSynced?.(currentHash);
+      },
+      async start(container, { hmr }) {
+        if (hmr?.isReload) {
+          return;
         }
+
+        const sync = options.sync;
+        if (!sync) {
+          return;
+        }
+
+        const client = container.resolve(BotKitTokens.Client);
+        if (!client.isReady()) {
+          throw new Error('Client is not ready. Commands cannot be deployed.');
+        }
+        const commandRouter = container.resolve(BotKitTokens.CommandRouter);
+        const commands = [
+          ...commandRouter.getSlashCommands().map((handler) => handler.data),
+          ...commandRouter.getContextMenuCommands().map((handler) => handler.data),
+        ].map((serializableOr) => resolveSerializableOr(serializableOr));
+        if (!commands.length) {
+          logger.info('No commands provided. Skipping deployment.');
+          return;
+        }
+        logger.info(`Found ${commands.length} command(s).`);
+        commands.sort((a, b) => a.name.localeCompare(b.name));
+        const currentHash = crypto.createHash('md5').update(JSON.stringify(commands)).digest('hex');
+
+        const { shouldSync, onSynced, deploy } = sync;
+        if (!(await shouldSync(currentHash))) {
+          logger.info('Commands are up to date. Skipping deployment.');
+          return;
+        }
+        logger.info('Detected command definition changes. Redeploying.');
+        await deployCommands(logger, client, commands, deploy);
+        await onSynced?.(currentHash);
       },
       async shutdown(container) {
         const client = container.resolve(BotKitTokens.Client);

@@ -26,7 +26,7 @@ export const ClientModule = {
         }
         container.value(BotKitTokens.Client, options.client).lock(BotKitTokens.Client);
       },
-      async boot(container) {
+      async start(container) {
         const client = container.resolve(BotKitTokens.Client);
         if (client.isReady()) {
           logger.debug('Client already ready, skipping login and emoji fetch.');
